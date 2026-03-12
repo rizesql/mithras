@@ -9,6 +9,7 @@
 out/
 .DS_Store
 bin/
+result
 
 # Test binary, built with `go test -c`
 *.test

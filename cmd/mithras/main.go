@@ -12,7 +12,7 @@ import (
 func main() {
 	cmd := &cli.Command{
 		Name:     "mithras",
-		Usage:    "TODO",
+		Usage:    "A self-contained authentication provider",
 		Commands: []*cli.Command{},
 	}
 

@@ -1,5 +1,5 @@
 module github.com/rizesql/mithras
 
-go 1.26.1
+go 1.25.7
 
 require github.com/urfave/cli/v3 v3.7.0

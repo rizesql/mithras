@@ -2,7 +2,7 @@
 {
   devShell = pkgs.mkShell {
     buildInputs = with pkgs; [
-      go_1_26
+      go_1_25
       gopls
       gotools
     ];
