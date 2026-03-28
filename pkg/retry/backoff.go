@@ -19,6 +19,7 @@ func LinBackoff(delay time.Duration) BackoffFunc {
 }
 
 func ExpBackoff(init time.Duration, mult, randFactor float64, maxInterval time.Duration) BackoffFunc {
+	// #nosec G404
 	r := rand.New(rand.NewSource(time.Now().UnixNano()))
 
 	return func(n int) time.Duration {

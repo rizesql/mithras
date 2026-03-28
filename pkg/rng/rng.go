@@ -16,6 +16,7 @@ type MathRand struct {
 // NewMathRand returns a MathRand seeded with the given value.
 func NewMathRand(seed int64) *MathRand {
 	//nolint:gosec // MathRand is used while knowing it's non-cryptographic randomness
+	// #nosec G404
 	return &MathRand{r: rand.New(rand.NewSource(seed))}
 }
 

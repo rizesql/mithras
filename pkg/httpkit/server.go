@@ -97,12 +97,11 @@ func (srv *Server) Serve(ctx context.Context, ln net.Listener) error {
 	serverCtx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	//nolint:gosec // deliberate use of context.Background for shutdown context
 	go func() {
 		select {
 		case <-ctx.Done():
 			tracing.Info("server.shutdown_requested")
-			shutdownCtx, shutdownCancel := context.WithTimeout(context.Background(), 30*time.Second)
+			shutdownCtx, shutdownCancel := context.WithTimeout(context.WithoutCancel(ctx), 30*time.Second)
 			defer shutdownCancel()
 
 			if err := srv.Shutdown(shutdownCtx); err != nil {

@@ -53,6 +53,7 @@ type Runtime struct {
 // New creates a new Runtime instance.
 func New(ctx context.Context) *Runtime {
 	//nolint:gosec // cancel function is stored in struct and called during Shutdown
+	// #nosec G118
 	ctx, cancel := context.WithCancel(ctx)
 	return &Runtime{
 		health:   newHealthState(),

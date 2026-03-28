@@ -38,8 +38,8 @@ type database struct {
 	maxRetries int
 }
 
-func New(ctx context.Context, cfg Config) (*database, error) {
-	poolCfg, err := applyConfig(&cfg)
+func New(ctx context.Context, cfg *Config) (*database, error) {
+	poolCfg, err := applyConfig(cfg)
 	if err != nil {
 		return nil, err
 	}
