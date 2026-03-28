@@ -1,0 +1,8 @@
+X-Request-Id:
+  description: |
+    Unique identifier for this request. Present on every response regardless
+    of status code. Use this value to correlate the response with server-side
+    audit log entries, or to include in support requests.
+  schema:
+    type: string
+    example: req_d6q5bg6mmrj6s3linfvg

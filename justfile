@@ -9,6 +9,11 @@ default:
 # Development                                                          #
 # ------------------------------------------------------------------ #
 
+# Run the server
+[group("development")]
+run:
+    go run ./cmd/mithras serve | hl -P
+
 # Format all code
 [group("development")]
 fmt:
@@ -39,6 +44,16 @@ test *args:
 test-race *args:
     go test -race ./... {{ args }}
 
+# Generate OpenAPI spec
+[group("development")]
+gen-openapi:
+    cd pkg/api && go generate
+
+# Generate queries from SQL files
+[group("development")]
+gen-sql:
+    cd pkg/db && sqlc generate
+
 # ------------------------------------------------------------------ #
 # Security                                                             #
 # ------------------------------------------------------------------ #
@@ -66,16 +81,6 @@ security: vuln sast
 build:
     go build -o bin/ ./...
 
-# Release build (optimized)
-[group("build")]
-build-release:
-    CGO_ENABLED=0 go build -ldflags="-s -w" -o bin/ ./...
-
-# Build the main binary (mithras)
-[group("build")]
-build-mithras:
-    go build -o bin/mithras ./cmd/mithras
-
 # Install globally
 [group("build")]
 install:
@@ -85,27 +90,12 @@ install:
 # Release                                                              #
 # ------------------------------------------------------------------ #
 
-# Verify go.mod module version matches a given tag
-[group("release")]
-verify-version tag:
-    #!/usr/bin/env bash
-    TAG_VERSION="{{ tag }}"
-    TAG_VERSION="${TAG_VERSION#v}"
-    echo "✓ Version check passed for tag {{ tag }}"
-
-# Tag and push a release (e.g. just release 0.2.0)
+# Tag and push — run after bump PR is merged
 [group("release")]
 release version:
     git tag -a "v{{ version }}" -m "Release v{{ version }}"
     git push origin "v{{ version }}"
     @echo "✓ Tagged and pushed v{{ version }}"
-
-# Build release and create tag
-[group("release")]
-publish version:
-    @just build-release
-    @just release {{ version }}
-    @echo "✓ Release {{ version }} published"
 
 # ------------------------------------------------------------------ #
 # Dependency management                                                #
@@ -121,11 +111,6 @@ mod-tidy:
 mod-verify:
     go mod verify
 
-# Show outdated dependencies
-[group("dependency management")]
-outdated:
-    go list -u -m all | grep '\['
-
 # Download all dependencies
 [group("dependency management")]
 mod-download:
@@ -136,7 +121,8 @@ mod-download:
 # ------------------------------------------------------------------ #
 
 # Run the full CI pipeline locally
-ci: check test vuln sast
+[group("ci")]
+ci: check test-race security
     @echo "✓ CI pipeline passed"
 
 # ------------------------------------------------------------------ #
@@ -147,7 +133,7 @@ ci: check test vuln sast
 [group("misc")]
 clean:
     go clean ./...
-    rm -rf bin/ coverage.out
+    rm -rf bin/ coverage.out result
 
 # Remove go cache
 [group("misc")]
@@ -158,11 +144,12 @@ clean-cache:
 [group("misc")]
 clean-all: clean clean-cache
 
-# Print tool versions (useful for debugging CI vs local discrepancies)
+# Print tool versions
+[group("misc")]
 versions:
     @echo "go:             $(go version)"
-    @echo "golangci-lint:  $(golangci-lint version)"
-    @echo "sqlc:           $(sqlc version)"
-    @echo "gosec:          $(gosec --version)"
+    @echo "gopls:          $(gopls version | head -1)"
+    @echo "golangci-lint:  $(golangci-lint version --short)"
+    @echo "gosec:          $(gosec --version 2>&1)"
     @echo "govulncheck:    $(govulncheck -version)"
     @echo "just:           $(just --version)"

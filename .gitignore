@@ -30,3 +30,7 @@ go.work.sum
 # env file
 .env.*
 *.db
+
+# Generated OpenAPI files
+pkg/api/openapi-bundled.yaml
+pkg/api/generated.go
