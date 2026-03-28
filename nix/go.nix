@@ -1,26 +1,34 @@
-{ pkgs }:
 {
+  pkgs,
+  go ? pkgs.go_1_26,
+}:
+{
+  inherit go;
+
   devShell = pkgs.mkShell {
-    buildInputs = with pkgs; [
-      go_1_25
+    packages = with pkgs; [
+      go
       gopls
       gotools
-    ];
-
-    packages = with pkgs; [
-      just
+      delve
       golangci-lint
-
       govulncheck
       gosec
+
+      hl-log-viewer
+      just
+      sqlc
+      goose
     ];
 
     shellHook = ''
-      echo "Go version: $(go version)"
-      echo "gopls version: $(gopls version)"
-      echo "golangci-lint version: $(golangci-lint version)"
-      echo "govulncheck version: $(govulncheck -version)"
-      echo "gosec version: $(gosec --version)"
+      set -e
+      echo "Go:            $(go version | awk '{print $3, $4}')"
+      echo "gopls:         $(gopls version | head -1)"
+      echo "golangci-lint: $(golangci-lint version --short)"
+      echo "govulncheck:   $(govulncheck -version)"
+      echo "gosec:         $(gosec --version 2>&1)"
+      echo "just:          $(just --version)"
     '';
   };
 }
