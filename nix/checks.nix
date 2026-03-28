@@ -26,21 +26,6 @@ in
     doCheck = true;
   };
 
-  lint =
-    pkgs.runCommand "mithras-lint"
-      {
-        buildInputs = [
-          pkgs.golangci-lint
-          go
-        ];
-      }
-      ''
-        ${goEnv}
-        cd ${cleanSrc}
-        golangci-lint run ./...
-        touch $out
-      '';
-
   fmt =
     pkgs.runCommand "mithras-fmt"
       {
