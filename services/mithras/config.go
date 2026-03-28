@@ -1,10 +1,12 @@
 package mithras
 
 import (
+	"github.com/go-viper/mapstructure/v2"
+	"github.com/spf13/pflag"
+	"github.com/spf13/viper"
+
 	"github.com/rizesql/mithras/pkg/httpkit"
 	"github.com/rizesql/mithras/pkg/tracing"
-
-	"github.com/spf13/pflag"
 )
 
 // Config holds the configuration for the Mithras service.
@@ -33,4 +35,18 @@ func Flags() *pflag.FlagSet {
 	f.AddFlagSet(tracing.Flags())
 
 	return f
+}
+
+func LoadConfig(v *viper.Viper) (Config, error) {
+	cfg := DefaultConfig()
+
+	err := v.Unmarshal(&cfg, viper.DecodeHook(
+		mapstructure.ComposeDecodeHookFunc(
+			mapstructure.StringToTimeDurationHookFunc(),
+			mapstructure.StringToSliceHookFunc(","),
+			mapstructure.TextUnmarshallerHookFunc(),
+		),
+	))
+
+	return cfg, err
 }

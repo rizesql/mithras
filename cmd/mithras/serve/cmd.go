@@ -29,9 +29,9 @@ func Command() *cobra.Command {
 }
 
 func serve(cmd *cobra.Command, _ []string) error {
-	cfg := mithras.DefaultConfig()
-	if err := viper.Unmarshal(&cfg); err != nil {
-		return fmt.Errorf("failed to unmarshal config: %w", err)
+	cfg, err := mithras.LoadConfig(viper.GetViper())
+	if err != nil {
+		return fmt.Errorf("failed to load config: %w", err)
 	}
 
 	return mithras.Run(cmd.Context(), &cfg)

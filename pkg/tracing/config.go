@@ -3,10 +3,8 @@ package tracing
 import (
 	"fmt"
 	"log/slog"
-	"reflect"
 	"strings"
 
-	"github.com/go-viper/mapstructure/v2"
 	"github.com/spf13/pflag"
 )
 
@@ -29,6 +27,18 @@ func (f Format) String() string {
 	default:
 		return "unknown"
 	}
+}
+
+func (f *Format) UnmarshalText(text []byte) error {
+	switch strings.ToLower(strings.TrimSpace(string(text))) {
+	case "", "json":
+		*f = FormatJSON
+	case "text":
+		*f = FormatText
+	default:
+		return fmt.Errorf("tracing: unknown format %q (want json|text)", text)
+	}
+	return nil
 }
 
 // Config holds all configuration options for the tracing package.
@@ -70,48 +80,48 @@ func Flags() *pflag.FlagSet {
 	return f
 }
 
-// DecodeHook returns a mapstructure.DecodeHookFunc that teaches mapstructure
-// how to convert string values from Viper into [slog.Level] and [Format].
-func DecodeHook() mapstructure.DecodeHookFuncType {
-	return func(from reflect.Type, to reflect.Type, data any) (any, error) {
-		if from.Kind() != reflect.String {
-			return data, nil
-		}
-		s := data.(string)
+// // DecodeHook returns a mapstructure.DecodeHookFunc that teaches mapstructure
+// // how to convert string values from Viper into [slog.Level] and [Format].
+// func DecodeHook() mapstructure.DecodeHookFuncType {
+// 	return func(from reflect.Type, to reflect.Type, data any) (any, error) {
+// 		if from.Kind() != reflect.String {
+// 			return data, nil
+// 		}
+// 		s := data.(string)
 
-		switch to {
-		case reflect.TypeFor[slog.Level]():
-			return parseLevel(s)
-		case reflect.TypeFor[Format]():
-			return parseFormat(s)
-		}
+// 		switch to {
+// 		case reflect.TypeFor[slog.Level]():
+// 			return parseLevel(s)
+// 		case reflect.TypeFor[Format]():
+// 			return parseFormat(s)
+// 		}
 
-		return data, nil
-	}
-}
+// 		return data, nil
+// 	}
+// }
 
-func parseLevel(s string) (slog.Level, error) {
-	switch strings.ToLower(strings.TrimSpace(s)) {
-	case "", "info":
-		return slog.LevelInfo, nil
-	case "debug":
-		return slog.LevelDebug, nil
-	case "warn", "warning":
-		return slog.LevelWarn, nil
-	case "error":
-		return slog.LevelError, nil
-	default:
-		return 0, fmt.Errorf("tracing: unknown level %q (want debug|info|warn|error)", s)
-	}
-}
+// func parseLevel(s string) (slog.Level, error) {
+// 	switch strings.ToLower(strings.TrimSpace(s)) {
+// 	case "", "info":
+// 		return slog.LevelInfo, nil
+// 	case "debug":
+// 		return slog.LevelDebug, nil
+// 	case "warn", "warning":
+// 		return slog.LevelWarn, nil
+// 	case "error":
+// 		return slog.LevelError, nil
+// 	default:
+// 		return 0, fmt.Errorf("tracing: unknown level %q (want debug|info|warn|error)", s)
+// 	}
+// }
 
-func parseFormat(s string) (Format, error) {
-	switch strings.ToLower(strings.TrimSpace(s)) {
-	case "", "json":
-		return FormatJSON, nil
-	case "text":
-		return FormatText, nil
-	default:
-		return 0, fmt.Errorf("tracing: unknown format %q (want json|text)", s)
-	}
-}
+// func parseFormat(s string) (Format, error) {
+// 	switch strings.ToLower(strings.TrimSpace(s)) {
+// 	case "", "json":
+// 		return FormatJSON, nil
+// 	case "text":
+// 		return FormatText, nil
+// 	default:
+// 		return 0, fmt.Errorf("tracing: unknown format %q (want json|text)", s)
+// 	}
+// }
