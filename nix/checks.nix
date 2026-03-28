@@ -22,7 +22,7 @@ in
     pname = "mithras-tests";
     version = "0.0.0";
     src = cleanSrc;
-    vendorHash = "sha256-bWK2jvfTKvwd3gEsaaWUC5vPIt8s/xLTCKwII98GekU=";
+    vendorHash = "sha256-KyRDkLdo3vIZyPKsu+HDcoSBSW+K9Tev1UwtfRS1iIE=";
     doCheck = true;
   };
 
