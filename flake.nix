@@ -5,31 +5,49 @@
   };
 
   outputs =
-    inputs:
+    { self, ... }@inputs:
     inputs.flake-utils.lib.eachDefaultSystem (
       system:
       let
         pkgs = import inputs.nixpkgs { inherit system; };
-        go = import ./nix/go.nix { inherit pkgs; };
-        mithras = import ./nix/mithras.nix { inherit pkgs; };
+
+        version =
+          if self ? rev && self ? ref then
+            let
+              tag = builtins.replaceStrings [ "refs/tags/" ] [ "" ] self.ref;
+            in
+            if builtins.match "v.*" tag != null then tag else builtins.substring 0 7 self.rev
+          else
+            "dirty";
+
+        toolchain = import ./nix/go.nix { inherit pkgs; };
+        go = toolchain.go;
+
+        mithras = import ./nix/mithras.nix { inherit pkgs go version; };
+        # docker = import ./nix/docker.nix { inherit pkgs mithras; };
+        checks = import ./nix/checks.nix {
+          inherit pkgs go;
+          src = ./.;
+        };
 
       in
       {
-        devShells = {
-          default = go.devShell;
-        };
+        devShells.default = toolchain.devShell;
 
         packages = {
           default = mithras;
-          inherit mithras;
+          inherit mithras; # docker;
         };
 
-        apps = {
-          default = {
-            type = "app";
-            program = "${mithras}/bin/mithras";
-          };
+        apps.default = {
+          type = "app";
+          program = "${mithras}/bin/mithras";
+          meta = mithras.meta;
         };
+
+        checks = checks;
+
+        formatter = pkgs.nixfmt;
       }
     );
 }

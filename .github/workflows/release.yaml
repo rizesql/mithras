@@ -3,59 +3,80 @@ name: Release
 on:
   push:
     tags:
-      - 'v*'
+      - "v*"
 
 permissions:
   contents: write
   packages: write
 
+env:
+  NIX_CONFIG: |
+    experimental-features = nix-command flakes
+
 jobs:
-  build:
-    name: Build & Release
+  validate-tag:
+    name: Validate tag
     runs-on: ubuntu-latest
+    steps:
+      - name: Check tag format
+        run: |
+          if ! [[ "${GITHUB_REF_NAME}" =~ ^v[0-9]+\.[0-9]+\.[0-9]+(-[a-zA-Z0-9.]+)?$ ]]; then
+            echo "❌ Invalid tag format: ${GITHUB_REF_NAME}"
+            echo "Expected format: v0.0.0 or v0.0.0-rc.1"
+            exit 1
+          fi
+          echo "✓ Tag format valid: ${GITHUB_REF_NAME}"
+
+  build:
+    name: Build (${{ matrix.target }})
+    needs: validate-tag
+    runs-on: ${{ matrix.os }}
     strategy:
+      fail-fast: false
       matrix:
-        goos: [linux, darwin]
-        goarch: [amd64, arm64]
-        exclude:
-          - goos: darwin
-            goarch: amd64
+        include:
+          - os: ubuntu-latest
+            target: x86_64-linux
+          - os: macos-latest
+            target: aarch64-darwin
+
     steps:
       - uses: actions/checkout@v6
-
-      - uses: DeterminateSystems/nix-installer-action@main
-      - uses: DeterminateSystems/magic-nix-cache-action@main
+      - uses: ./.github/actions/setup-nix
 
       - name: Build binary
         run: |
-          GOOS=${{ matrix.goos }} GOARCH=${{ matrix.goarch }} go build \
-            -ldflags="-s -w -X main.version=${{ github.ref_name }}" \
-            -o mithras-${{ matrix.goos }}-${{ matrix.goarch }} \
-            ./cmd/mithras
+          nix build .#packages.${{ matrix.target }}.mithras
+          mkdir -p dist
+          cp result/bin/mithras dist/mithras-${{ matrix.target }}
 
-      - name: Upload artifact
-        uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
-          name: mithras-${{ matrix.goos }}-${{ matrix.goarch }}
-          path: mithras-${{ matrix.goos }}-${{ matrix.goarch }}
+          name: mithras-${{ matrix.target }}
+          path: dist/mithras-${{ matrix.target }}
           retention-days: 1
 
   release:
-    name: Create Release
     runs-on: ubuntu-latest
-    needs: build
+    needs: [build]
+
     steps:
       - uses: actions/checkout@v6
 
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@v8
         with:
           pattern: mithras-*
           merge-multiple: true
-          path: ./bin
+          path: ./dist
 
-      - name: Create Release
-        uses: softprops/action-gh-release@v2
+      - name: Checksums
+        run: |
+          cd dist
+          sha256sum mithras-* > checksums.txt
+
+      - uses: softprops/action-gh-release@v2
         with:
-          files: ./bin/*
+          files: |
+            ./dist/mithras-*
+            ./dist/checksums.txt
           generate_release_notes: true
-          fail_on_unmatched_files: true
