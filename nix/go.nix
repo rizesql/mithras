@@ -12,13 +12,9 @@
       gotools
       delve
       golangci-lint
-      govulncheck
-      gosec
 
       hl-log-viewer
       just
-      sqlc
-      goose
     ];
 
     shellHook = ''
@@ -26,8 +22,6 @@
       echo "Go:            $(go version | awk '{print $3, $4}')"
       echo "gopls:         $(gopls version | head -1)"
       echo "golangci-lint: $(golangci-lint version --short)"
-      echo "govulncheck:   $(govulncheck -version)"
-      echo "gosec:         $(gosec --version 2>&1)"
       echo "just:          $(just --version)"
     '';
   };

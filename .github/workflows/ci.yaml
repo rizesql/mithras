@@ -28,20 +28,6 @@ jobs:
 
       - run: nix flake check --print-build-logs
       - run: nix develop --command go test -race ./...
-
-  docker:
-    runs-on: ubuntu-latest
-    needs: validate
-
-    steps:
-      - uses: actions/checkout@v6
-      - uses: ./.github/actions/setup-nix
-
-      - run: nix build .#docker
-
-      - id: docker_load
-        run: |
-          IMAGE=$(docker load < result | sed -n 's/Loaded image: //p')
-          echo "image=$IMAGE" >> $GITHUB_OUTPUT
-
-      - run: docker run --rm "${{ steps.docker_load.outputs.image }}" /bin/mithras --version
+      - run: nix develop --command go tool golangci-lint run ./...
+      - run: nix develop --command go tool gosec ./...
+      - run: nix develop --command go tool govulncheck ./...

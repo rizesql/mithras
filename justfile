@@ -17,13 +17,13 @@ run:
 # Format all code
 [group("development")]
 fmt:
-    goimports -w ./..
-    gofmt -w ./..
+    go tool goimports -w .
+    gofmt -w .
 
 # Check formatting without modifying files
 [group("development")]
 fmt-check:
-    test -z "$(gofmt -l ./..)"
+    @test -z "$(gofmt -l .)" || (echo "Code is not formatted. Run 'just fmt'" && exit 1)
 
 # Run linter
 [group("development")]
@@ -44,15 +44,10 @@ test *args:
 test-race *args:
     go test -race ./... {{ args }}
 
-# Generate OpenAPI spec
+# Generate all code (OpenAPI, SQL, etc)
 [group("development")]
-gen-openapi:
-    cd pkg/api && go generate
-
-# Generate queries from SQL files
-[group("development")]
-gen-sql:
-    cd pkg/db && sqlc generate
+gen:
+    go generate ./...
 
 # ------------------------------------------------------------------ #
 # Security                                                             #
@@ -61,12 +56,12 @@ gen-sql:
 # Run vulnerability check
 [group("security")]
 vuln:
-    govulncheck ./...
+    go tool govulncheck ./...
 
 # Run static application security testing
 [group("security")]
 sast:
-    gosec ./...
+    go tool gosec ./...
 
 # Run all security checks
 [group("security")]
@@ -147,9 +142,9 @@ clean-all: clean clean-cache
 # Print tool versions
 [group("misc")]
 versions:
-    @echo "go:             $(go version)"
-    @echo "gopls:          $(gopls version | head -1)"
-    @echo "golangci-lint:  $(golangci-lint version --short)"
-    @echo "gosec:          $(gosec --version 2>&1)"
-    @echo "govulncheck:    $(govulncheck -version)"
-    @echo "just:           $(just --version)"
+    @echo "go:            $(go version)"
+    @echo "gopls:         $(go tool gopls version | head -1)"
+    @echo "golangci-lint: $(golangci-lint version --short)"
+    @echo "gosec:         $(go tool gosec --version 2>&1)"
+    @echo "govulncheck:   $(go tool govulncheck -version)"
+    @echo "just:          $(just --version)"

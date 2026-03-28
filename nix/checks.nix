@@ -55,19 +55,4 @@ in
         fi
         touch $out
       '';
-
-  sec =
-    pkgs.runCommand "mithras-sec"
-      {
-        buildInputs = [
-          pkgs.gosec
-          go
-        ];
-      }
-      ''
-        ${goEnv}
-        cd ${cleanSrc}
-        gosec ./...
-        touch $out
-      '';
 }
