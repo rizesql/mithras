@@ -43,7 +43,6 @@ jobs:
       - run: nix flake check --print-build-logs
 
   test:
-    name: Test
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v6
@@ -53,7 +52,6 @@ jobs:
         run: nix develop --command go test -v ./...
 
   test-race:
-    name: Test
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v6
