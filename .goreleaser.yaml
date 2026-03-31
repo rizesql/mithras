@@ -4,12 +4,6 @@
 version: 2
 project_name: mithras
 
-before:
-  hooks:
-    - go mod tidy
-    - go generate ./...
-    - rm pkg/db/delete_me.go
-
 builds:
   - main: ./cmd/mithras
     env:
@@ -51,18 +45,3 @@ changelog:
       - "^docs:"
       - "^test:"
       - "^ci:"
-
-dockers_v2:
-  - images:
-      - "ghcr.io/${{ .Env.GITHUB_REPOSITORY }}"
-    tags:
-      - "v{{ .Version }}"
-      - "{{ if .IsNightly }}nightly{{ end }}"
-      - "{{ if not .IsNightly }}latest{{ end }}"
-    labels:
-      "org.opencontainers.image.description": "Foo bar"
-      "org.opencontainers.image.created": "{{.Date}}"
-      "org.opencontainers.image.name": "{{.ProjectName}}"
-      "org.opencontainers.image.revision": "{{.FullCommit}}"
-      "org.opencontainers.image.version": "{{.Version}}"
-      "org.opencontainers.image.source": "{{.GitURL}}"
