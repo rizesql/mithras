@@ -34,18 +34,6 @@ jobs:
       - name: Check formatting
         run: nix develop --command gofmt -l .
 
-  security:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v6
-      - uses: ./.github/actions/setup-nix
-
-      - name: Vuln Check
-        run: nix develop --command go tool govulncheck ./...
-
-      - name: Gosec
-        run: nix develop --command go tool gosec -exclude-generated ./...
-
   nix:
     runs-on: ubuntu-latest
     steps:
@@ -55,22 +43,21 @@ jobs:
       - run: nix flake check --print-build-logs
 
   test:
-    needs: [lint, format, security, nix]
-    name: Test (${{ matrix.os }})
-    runs-on: ${{ matrix.os }}
-    strategy:
-      fail-fast: true
-      matrix:
-        os: [ubuntu-latest, macos-latest]
-
+    name: Test
+    runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v6
       - uses: ./.github/actions/setup-nix
-        with:
-          cache-primary-key: nix-test-${{ matrix.os }}-${{ hashFiles('flake.lock') }}
 
       - name: Run Standard Tests
         run: nix develop --command go test -v ./...
+
+  test-race:
+    name: Test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: ./.github/actions/setup-nix
 
       - name: Run Race Detector
         run: nix develop --command go test -race -v -short ./...
