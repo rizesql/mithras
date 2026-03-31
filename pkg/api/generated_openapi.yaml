@@ -10,41 +10,31 @@ info:
 servers:
     - url: http://localhost:8080
 paths:
-    /v1/echo:
+    /v2/register:
         post:
             tags:
-                - debug
+                - iam
             security: []
-            operationId: echo
-            summary: Echo
+            operationId: v2.register
+            summary: Register
             description: |
-                Reflects the provided message back to the caller unchanged.
-
-                Use this endpoint to verify end-to-end request handling through the service — confirming that the network path, routing, and serialization layers are all functioning correctly. No authentication required and no side effects produced.
-
-                **Required Permissions**
-
-                None - this endpoint requires no authentication.
-
-                **Side Effects**
-
-                None - this is a read-only debug endpoint that does not modify any data or state.
+                TODO
             requestBody:
                 required: true
                 content:
                     application/json:
                         schema:
-                            $ref: "#/components/schemas/V1EchoRequest"
+                            $ref: "#/components/schemas/V2RegisterRequest"
             responses:
-                "200":
-                    description: Message echoed successfully.
+                "201":
+                    description: User registered successfully.
                     headers:
                         X-Request-Id:
                             $ref: "#/components/headers/X-Request-Id"
                     content:
                         application/json:
                             schema:
-                                $ref: "#/components/schemas/V1EchoResponse"
+                                $ref: "#/components/schemas/V2RegisterResponse"
                 "400":
                     $ref: "#/components/responses/BadRequestError"
                 "429":
@@ -55,30 +45,43 @@ security:
     - rootKey: []
 components:
     schemas:
-        V1EchoRequest:
+        V2RegisterRequest:
             type: object
             required:
-                - message
+                - name
+                - email
+                - password
+            additionalProperties: false
             properties:
-                message:
-                    description: The message to echo back. The server will return this value unchanged in the response.
-                    example: Hello, Mithras!
+                name:
+                    description: The user's preferred name.
                     type: string
                     minLength: 1
-                    maxLength: 1024
-            additionalProperties: false
-            description: Request body for the echo endpoint. The provided message will be reflected verbatim in the response data.
-        V1EchoResponse:
+                    maxLength: 255
+                    example: Alice
+                email:
+                    description: The user's email address.
+                    type: string
+                    format: email
+                    example: alice@mithras.com
+                password:
+                    description: |
+                        The user's chosen password. Must be at least 8 characters long and contain
+                        at least one uppercase letter, one lowercase letter, one digit, and one special character.
+                    type: string
+                    format: password
+                    minLength: 8
+                    maxLength: 256
+        V2RegisterResponse:
             type: object
             required:
-                - message
-            properties:
-                message:
-                    description: The echoed message, returned verbatim from the request. This value will always be identical to the message sent in the request body.
-                    example: Hello, Mithras!
-                    type: string
+                - id
             additionalProperties: false
-            description: Response data for the echo endpoint. Contains the original message reflected back unchanged from the request, confirming end-to-end request handling through the service.
+            properties:
+                id:
+                    description: The unique identifier for the created user.
+                    type: string
+                    example: usr_24abcde1234567890fgh
         Problem:
             type: object
             required:

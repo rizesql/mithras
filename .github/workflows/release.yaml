@@ -9,10 +9,6 @@ permissions:
   contents: write
   packages: write
 
-env:
-  NIX_CONFIG: |
-    experimental-features = nix-command flakes
-
 jobs:
   validate-tag:
     name: Validate tag
@@ -27,56 +23,86 @@ jobs:
           fi
           echo "✓ Tag format valid: ${GITHUB_REF_NAME}"
 
-  build:
-    name: Build (${{ matrix.target }})
-    needs: validate-tag
-    runs-on: ${{ matrix.os }}
-    strategy:
-      fail-fast: false
-      matrix:
-        include:
-          - os: ubuntu-latest
-            target: x86_64-linux
-          - os: macos-latest
-            target: aarch64-darwin
-
-    steps:
-      - uses: actions/checkout@v6
-      - uses: ./.github/actions/setup-nix
-
-      - name: Build binary
-        run: |
-          nix build .#packages.${{ matrix.target }}.mithras
-          mkdir -p dist
-          cp result/bin/mithras dist/mithras-${{ matrix.target }}
-
-      - uses: actions/upload-artifact@v7
-        with:
-          name: mithras-${{ matrix.target }}
-          path: dist/mithras-${{ matrix.target }}
-          retention-days: 1
-
   release:
+    name: Run GoReleaser
     runs-on: ubuntu-latest
-    needs: [build]
-
     steps:
-      - uses: actions/checkout@v6
-
-      - uses: actions/download-artifact@v8
+      - name: Checkout codebase
+        uses: actions/checkout@v6
         with:
-          pattern: mithras-*
-          merge-multiple: true
-          path: ./dist
+          fetch-depth: 0
 
-      - name: Checksums
-        run: |
-          cd dist
-          sha256sum mithras-* > checksums.txt
-
-      - uses: softprops/action-gh-release@v2
+      - name: Set up Go
+        uses: actions/setup-go@v5
         with:
-          files: |
-            ./dist/mithras-*
-            ./dist/checksums.txt
-          generate_release_notes: true
+          go-version: ~1.26.1
+
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ github.token }}
+
+      - name: Run GoReleaser
+        uses: goreleaser/goreleaser-action@v5
+        with:
+          distribution: goreleaser
+          version: latest
+          args: release --clean
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+
+  # build:
+  #   name: Build (${{ matrix.target }})
+  #   needs: validate-tag
+  #   runs-on: ${{ matrix.os }}
+  #   strategy:
+  #     fail-fast: false
+  #     matrix:
+  #       include:
+  #         - os: ubuntu-latest
+  #           target: x86_64-linux
+  #         - os: macos-latest
+  #           target: aarch64-darwin
+
+  #   steps:
+  #     - uses: actions/checkout@v6
+  #     - uses: ./.github/actions/setup-nix
+
+  #     - name: Build binary
+  #       run: |
+  #         nix build .#packages.${{ matrix.target }}.mithras
+  #         mkdir -p dist
+  #         cp result/bin/mithras dist/mithras-${{ matrix.target }}
+
+  #     - uses: actions/upload-artifact@v7
+  #       with:
+  #         name: mithras-${{ matrix.target }}
+  #         path: dist/mithras-${{ matrix.target }}
+  #         retention-days: 1
+
+  # release:
+  #   runs-on: ubuntu-latest
+  #   needs: [build]
+
+  #   steps:
+  #     - uses: actions/checkout@v6
+
+  #     - uses: actions/download-artifact@v8
+  #       with:
+  #         pattern: mithras-*
+  #         merge-multiple: true
+  #         path: ./dist
+
+  #     - name: Checksums
+  #       run: |
+  #         cd dist
+  #         sha256sum mithras-* > checksums.txt
+
+  #     - uses: softprops/action-gh-release@v2
+  #       with:
+  #         files: |
+  #           ./dist/mithras-*
+  #           ./dist/checksums.txt
+  #         generate_release_notes: true

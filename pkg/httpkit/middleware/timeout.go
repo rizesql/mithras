@@ -5,7 +5,7 @@ import (
 	"errors"
 	"time"
 
-	"github.com/rizesql/mithras/pkg/errkit"
+	"github.com/rizesql/mithras/internal/errkit"
 	"github.com/rizesql/mithras/pkg/httpkit"
 )
 

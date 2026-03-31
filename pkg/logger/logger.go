@@ -1,5 +1,5 @@
-// Package tracing provides wide-event traces with tail sampling support.
-package tracing
+// Package logger provides wide-event traces with tail sampling support.
+package logger
 
 import (
 	"log/slog"
@@ -9,8 +9,7 @@ import (
 
 var (
 	mu      sync.Mutex
-	log     *slog.Logger
-	sampler Sampler
+	Logger  *slog.Logger
 	enabled bool
 )
 
@@ -20,6 +19,10 @@ func init() {
 
 // Configure applies cfg to the global tracer. It is safe to call concurrently.
 func Configure(cfg Config) {
+	mu.Lock()
+	defer mu.Unlock()
+
+	enabled = cfg.Enabled
 	opts := &slog.HandlerOptions{Level: cfg.Level}
 
 	var h slog.Handler
@@ -29,31 +32,24 @@ func Configure(cfg Config) {
 		h = slog.NewJSONHandler(os.Stdout, opts)
 	}
 
-	s := cfg.Sampler
-	if s == nil {
-		s = AlwaysSample{}
-	}
-
-	mu.Lock()
-	defer mu.Unlock()
-
-	enabled = cfg.Enabled
-	log = slog.New(h)
-	sampler = s
+	Logger = slog.New(h)
+	slog.SetDefault(Logger)
 }
 
 // AddBaseAttrs adds base attributes to the trace.
 func AddBaseAttrs(attrs ...slog.Attr) {
 	mu.Lock()
 	defer mu.Unlock()
-	log = slog.New(log.Handler().WithAttrs(attrs))
+	Logger = slog.New(Logger.Handler().WithAttrs(attrs))
+	slog.SetDefault(Logger)
 }
 
-// SetSampler sets the sampler for the trace.
-func SetSampler(s Sampler) {
+// SetHandler explicitly overrides the underlying slog.Handler.
+// Useful for diverting traces to custom UI rendering engines natively like pkg/cli.
+func SetHandler(h slog.Handler) {
 	mu.Lock()
 	defer mu.Unlock()
-	sampler = s
+	Logger = slog.New(h)
 }
 
 // Debug emits a debug-level message.
@@ -61,7 +57,7 @@ func Debug(msg string, args ...any) {
 	if !enabled {
 		return
 	}
-	log.Debug(msg, args...)
+	Logger.Debug(msg, args...)
 }
 
 // Info emits an info-level message.
@@ -69,7 +65,7 @@ func Info(msg string, args ...any) {
 	if !enabled {
 		return
 	}
-	log.Info(msg, args...)
+	Logger.Info(msg, args...)
 }
 
 // Warn emits a warning-level message.
@@ -77,7 +73,7 @@ func Warn(msg string, args ...any) {
 	if !enabled {
 		return
 	}
-	log.Warn(msg, args...)
+	Logger.Warn(msg, args...)
 }
 
 // Error emits an error-level message.
@@ -85,5 +81,13 @@ func Error(msg string, args ...any) {
 	if !enabled {
 		return
 	}
-	log.Error(msg, args...)
+	Logger.Error(msg, args...)
+}
+
+// Fatal emits an error-level message and immediately exits the program with status 1.
+func Fatal(msg string, args ...any) {
+	if enabled {
+		Logger.Error(msg, args...)
+	}
+	os.Exit(1)
 }

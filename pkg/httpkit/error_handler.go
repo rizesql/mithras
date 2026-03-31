@@ -6,10 +6,10 @@ import (
 	"net/http"
 	"strings"
 
+	"github.com/rizesql/mithras/internal/errkit"
 	"github.com/rizesql/mithras/pkg/api"
 	"github.com/rizesql/mithras/pkg/api/validator"
-	"github.com/rizesql/mithras/pkg/errkit"
-	"github.com/rizesql/mithras/pkg/tracing"
+	"github.com/rizesql/mithras/pkg/logger"
 )
 
 // ProblemType represents a URI reference identifying the problem type
@@ -60,7 +60,7 @@ func defaultErrorHandler(c *Context, err error) {
 		}
 
 		if writeErr := c.res.ProblemJSON(status, response); writeErr != nil {
-			tracing.Error("server.error_handler.write_json_failed",
+			logger.Error("server.error_handler.write_json_failed",
 				"error", writeErr)
 		}
 		return
@@ -76,7 +76,7 @@ func defaultErrorHandler(c *Context, err error) {
 	}
 
 	if writeErr := c.res.ProblemJSON(status, response); writeErr != nil {
-		tracing.Error("server.error_handler.write_json_failed",
+		logger.Error("server.error_handler.write_json_failed",
 			"error", writeErr)
 	}
 }

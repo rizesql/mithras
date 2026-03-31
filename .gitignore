@@ -28,9 +28,13 @@ go.work
 go.work.sum
 
 # env file
+.env
 .env.*
 *.db
 
 # Generated OpenAPI files
 pkg/api/openapi-bundled.yaml
 pkg/api/generated.go
+
+# Added by goreleaser init:
+dist/

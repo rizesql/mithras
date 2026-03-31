@@ -9,9 +9,9 @@ servers:
   - url: http://localhost:8080
 
 paths:
-  /v1/echo:
+  /v2/register:
     post:
-      $ref: "./paths/v1_echo.yaml#/paths/post"
+      $ref: "./paths/v2_register.yaml#/paths/post"
 
 security:
   - rootKey: []

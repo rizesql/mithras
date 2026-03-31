@@ -1,0 +1,112 @@
+services:
+  postgres:
+    image: postgres:18-alpine
+    restart: unless-stopped
+    command:
+      - "postgres"
+      # Modern hardware defaults (Postgres ships with legacy 1990s 128MB buffers by default)
+      - "-c"
+      - "shared_buffers=256MB"
+      - "-c"
+      - "work_mem=16MB"
+      # Telemetry: Instantly logs all schema changes, slow queries (>1000ms), and deadlock waits
+      - "-c"
+      - "log_statement=ddl"
+      - "-c"
+      - "log_min_duration_statement=1000"
+      - "-c"
+      - "log_lock_waits=on"
+    environment:
+      POSTGRES_USER: user
+      POSTGRES_PASSWORD: password
+      POSTGRES_DB: mithras
+    ports:
+      - "127.0.0.1:5432:5432"
+    volumes:
+      - mithras_pg_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U user -d mithras"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    security_opt:
+      - no-new-privileges:true
+    networks:
+      - mithras_backend
+
+  redis:
+    image: redis:8.6-alpine
+    restart: unless-stopped
+    command:
+      - "redis-server"
+      - "--appendonly"
+      - "yes"
+      # Strict 256MB cap to prevent test benchmarks from OOM crashing your laptop
+      - "--maxmemory"
+      - "256mb"
+      # Guarantees old API rate limit buckets are silently evicted first when memory hits the cap
+      - "--maxmemory-policy"
+      - "allkeys-lru"
+      # Silences noisy connection handshakes so you only see visceral errors in the logs
+      - "--loglevel"
+      - "warning"
+    ports:
+      - "127.0.0.1:6379:6379"
+    volumes:
+      - mithras_redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+    security_opt:
+      - no-new-privileges:true
+    networks:
+      - mithras_backend
+
+  drizzle:
+    image: ghcr.io/drizzle-team/gateway:latest
+    restart: always
+    depends_on:
+      postgres:
+        condition: service_healthy
+    ports:
+      - "127.0.0.1:4983:4983"
+    environment:
+      - PORT=4983
+      # - STORE_PATH=./app
+    volumes:
+      - drizzle-gateway:/app
+    security_opt:
+      - no-new-privileges:true
+    networks:
+      - mithras_backend
+
+  clickstack:
+    image: clickhouse/clickstack-local:latest
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:8123:8123" # ClickHouse native
+      - "127.0.0.1:8081:8080" # HyperDX UI
+      - "127.0.0.1:4317:4317" # OTLP gRPC
+      - "127.0.0.1:4318:4318" # OTLP HTTP
+    volumes:
+      - mithras_clickstack_db:/data/db
+      - mithras_clickstack_ch_data:/var/lib/clickhouse
+      - mithras_clickstack_ch_logs:/var/log/clickhouse-server
+    security_opt:
+      - no-new-privileges:true
+    networks:
+      - mithras_backend
+
+volumes:
+  mithras_pg_data:
+  mithras_redis_data:
+  drizzle-gateway:
+  mithras_clickstack_db:
+  mithras_clickstack_ch_data:
+  mithras_clickstack_ch_logs:
+
+networks:
+  mithras_backend:
+    driver: bridge

@@ -17,6 +17,7 @@ linters:
     - prealloc
     - revive
     - unparam
+    - contextcheck
   settings:
     goconst:
       min-len: 3
@@ -113,6 +114,10 @@ linters:
 issues:
   exclude-use-default: false
   exclude-rules:
+    - path: _generated\.go
+      linters:
+        - gosec
+      text: "G101"
     - path: _test\.go
       linters:
         - errcheck

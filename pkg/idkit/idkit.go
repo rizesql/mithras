@@ -14,6 +14,6 @@ func New(prefix string) string {
 	return prefix + "_" + id
 }
 
-type PostID string
+type UserID string
 
-func NewPostID() PostID { return PostID(New("pst")) }
+func NewUserID() UserID { return UserID(New("usr")) }

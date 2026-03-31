@@ -6,14 +6,24 @@ package db
 
 import (
 	"github.com/jackc/pgx/v5/pgtype"
+	"github.com/rizesql/mithras/internal/email"
+	"github.com/rizesql/mithras/internal/password"
 	"github.com/rizesql/mithras/pkg/idkit"
 )
 
-type Post struct {
+type CredentialPassword struct {
 	Pk        int64              `db:"pk"`
-	ID        idkit.PostID       `db:"id"`
-	Title     pgtype.Text        `db:"title"`
-	Body      pgtype.Text        `db:"body"`
+	UserID    idkit.UserID       `db:"user_id"`
+	Secret    password.Hashed    `db:"secret"`
+	CreatedAt pgtype.Timestamptz `db:"created_at"`
+	UpdatedAt pgtype.Timestamptz `db:"updated_at"`
+}
+
+type User struct {
+	Pk        int64              `db:"pk"`
+	ID        idkit.UserID       `db:"id"`
+	Name      string             `db:"name"`
+	Email     email.Address      `db:"email"`
 	CreatedAt pgtype.Timestamptz `db:"created_at"`
 	UpdatedAt pgtype.Timestamptz `db:"updated_at"`
 }

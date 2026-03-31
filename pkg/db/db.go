@@ -2,20 +2,21 @@ package db
 
 import (
 	"context"
+	"embed"
 	"fmt"
 	"time"
 
+	"github.com/exaring/otelpgx"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/jackc/pgx/v5/pgxpool"
 
+	"github.com/rizesql/mithras/pkg/logger"
 	"github.com/rizesql/mithras/pkg/retry"
 )
 
-type Database interface {
-	DBTX
-	Close() error
-}
+//go:embed migrations/*.sql
+var Migrations embed.FS
 
 type DBTX interface {
 	Exec(context.Context, string, ...any) (pgconn.CommandTag, error)
@@ -27,18 +28,14 @@ type Queries struct{}
 
 var Query Querier = &Queries{}
 
-type DBTx interface {
-	DBTX
-	Commit() error
-	Rollback() error
-}
-
-type database struct {
-	*pgxpool.Pool
+type Database struct {
+	pool       *pgxpool.Pool
 	maxRetries int
 }
 
-func New(ctx context.Context, cfg *Config) (*database, error) {
+func New(ctx context.Context, cfg *Config) (*Database, error) {
+	logger.Info("db.starting")
+
 	poolCfg, err := applyConfig(cfg)
 	if err != nil {
 		return nil, err
@@ -49,14 +46,16 @@ func New(ctx context.Context, cfg *Config) (*database, error) {
 		return nil, err
 	}
 
+	logger.Info("db.pool.ping")
 	err = ping(ctx, pool)
 	if err != nil {
 		pool.Close()
 		return nil, err
 	}
 
-	return &database{
-		Pool:       pool,
+	logger.Info("db.pool.connected")
+	return &Database{
+		pool:       pool,
 		maxRetries: cfg.MaxRetries,
 	}, nil
 }
@@ -65,6 +64,15 @@ func applyConfig(cfg *Config) (*pgxpool.Config, error) {
 	poolCfg, err := pgxpool.ParseConfig(cfg.URI)
 	if err != nil {
 		return nil, fmt.Errorf("failed to parse database URI: %w", err)
+	}
+
+	poolCfg.ConnConfig.Tracer = otelpgx.NewTracer(otelpgx.WithTrimSQLInSpanName())
+
+	if cfg.SchemaName != "" {
+		if poolCfg.ConnConfig.RuntimeParams == nil {
+			poolCfg.ConnConfig.RuntimeParams = make(map[string]string)
+		}
+		poolCfg.ConnConfig.RuntimeParams["search_path"] = cfg.SchemaName
 	}
 
 	if cfg.MaxConnections > 0 {
@@ -93,7 +101,7 @@ func applyConfig(cfg *Config) (*pgxpool.Config, error) {
 		poolCfg.ConnConfig.ConnectTimeout = cfg.ConnectTimeout
 	}
 
-	poolCfg.ConnConfig.DefaultQueryExecMode = pgx.QueryExecModeCacheStatement
+	poolCfg.ConnConfig.DefaultQueryExecMode = pgx.QueryExecModeCacheDescribe
 
 	return poolCfg, nil
 }
@@ -134,17 +142,19 @@ func ping(ctx context.Context, pool *pgxpool.Pool) error {
 	return nil
 }
 
-func (db *database) Close() {
-	if db.Pool != nil {
-		db.Pool.Close()
+func (db *Database) Close() error {
+	if db.pool != nil {
+		db.pool.Close()
 	}
+
+	return nil
 }
 
-func (db *database) IsReady(ctx context.Context) (bool, error) {
+func (db *Database) IsReady(ctx context.Context) (bool, error) {
 	ctx, cancel := context.WithTimeout(ctx, 2*time.Second)
 	defer cancel()
 
-	if err := db.Ping(ctx); err != nil {
+	if err := db.pool.Ping(ctx); err != nil {
 		return false, err
 	}
 	return true, nil

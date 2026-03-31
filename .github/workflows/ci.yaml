@@ -16,18 +16,61 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  validate:
+  lint:
     runs-on: ubuntu-latest
-    if: |
-      github.event_name != 'push' ||
-      !startsWith(github.event.head_commit.message, 'Merge pull request #')
-
     steps:
       - uses: actions/checkout@v6
       - uses: ./.github/actions/setup-nix
 
-      - run: nix develop --command golangci-lint run ./...
+      - name: GolangCI-lint
+        run: nix develop --command golangci-lint run ./...
+
+  format:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: ./.github/actions/setup-nix
+
+      - name: Check formatting
+        run: nix develop --command gofmt -l .
+
+  security:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: ./.github/actions/setup-nix
+
+      - name: Vuln Check
+        run: nix develop --command go tool govulncheck ./...
+
+      - name: Gosec
+        run: nix develop --command go tool gosec -exclude-generated ./...
+
+  nix:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: ./.github/actions/setup-nix
+
       - run: nix flake check --print-build-logs
-      - run: nix develop --command go test -race ./...
-      - run: nix develop --command go tool gosec ./...
-      - run: nix develop --command go tool govulncheck ./...
+
+  test:
+    needs: [lint, format, security, nix]
+    name: Test (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: true
+      matrix:
+        os: [ubuntu-latest, macos-latest]
+
+    steps:
+      - uses: actions/checkout@v6
+      - uses: ./.github/actions/setup-nix
+        with:
+          cache-primary-key: nix-test-${{ matrix.os }}-${{ hashFiles('flake.lock') }}
+
+      - name: Run Standard Tests
+        run: nix develop --command go test -v ./...
+
+      - name: Run Race Detector
+        run: nix develop --command go test -race -v -short ./...

@@ -10,7 +10,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/rizesql/mithras/pkg/tracing"
+	"github.com/rizesql/mithras/pkg/logger"
 )
 
 const (
@@ -69,7 +69,7 @@ func (rt *Runtime) RegisterHealth(mux *http.ServeMux, prefix ...string) {
 		base = strings.TrimRight(prefix[0], "/")
 	}
 
-	tracing.Info("runtime.health_registered",
+	logger.Info("runtime.health_registered",
 		"base", base)
 
 	mux.HandleFunc(fmt.Sprintf("GET %s/live", base), rt.handleLive)

@@ -6,12 +6,31 @@ default:
     @just --list --unsorted
 
 # ------------------------------------------------------------------ #
+# Infrastructure                                                     #
+# ------------------------------------------------------------------ #
+
+# Start Postgres and Redis in the background
+[group("infrastructure")]
+up:
+    docker compose up -d
+
+# Stop and remove the database/cache containers
+[group("infrastructure")]
+down:
+    docker compose down
+
+# Destroy all local data (useful if you need a clean slate)
+[group("infrastructure")]
+nuke:
+    docker compose down -v
+
+# ------------------------------------------------------------------ #
 # Development                                                          #
 # ------------------------------------------------------------------ #
 
 # Run the server
 [group("development")]
-run:
+run: up
     go run ./cmd/mithras serve | hl -P
 
 # Format all code
@@ -50,6 +69,35 @@ gen:
     go generate ./...
 
 # ------------------------------------------------------------------ #
+# Database                                                           #
+# ------------------------------------------------------------------ #
+
+db_dir := "pkg/db/migrations"
+db_url := env("MITHRAS_DB_URI", "postgres://user:password@localhost:5432/mithras?sslmode=disable")
+db_schema := env("MITHRAS_DB_SCHEMA_NAME", "public")
+db_table := env("MITHRAS_DB_MIGRATIONS_TABLE", "mithras_schema_migrations")
+
+# Create a new migration file (Usage: just migrate create_users_table)
+[group("database")]
+migrate name:
+    go tool goose -dir {{ db_dir }} create {{ name }} sql
+
+# Check migration status internally securely navigating the namespace
+[group("database")]
+db-status:
+    go tool goose -table {{ db_table }} -dir {{ db_dir }} postgres "{{ db_url }}&search_path={{ db_schema }}" status
+
+# Rollback the last migration step cleanly
+[group("database")]
+db-down:
+    go tool goose -table {{ db_table }} -dir {{ db_dir }} postgres "{{ db_url }}&search_path={{ db_schema }}" down
+
+# Reset the isolated database components completely
+[group("database")]
+db-reset:
+    go tool goose -table {{ db_table }} -dir {{ db_dir }} postgres "{{ db_url }}&search_path={{ db_schema }}" down-to 0
+
+# ------------------------------------------------------------------ #
 # Security                                                             #
 # ------------------------------------------------------------------ #
 
@@ -61,7 +109,7 @@ vuln:
 # Run static application security testing
 [group("security")]
 sast:
-    go tool gosec ./...
+    go tool gosec -exclude-generated ./...
 
 # Run all security checks
 [group("security")]

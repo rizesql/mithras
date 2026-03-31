@@ -7,6 +7,8 @@ import (
 	"encoding/json"
 	"fmt"
 	"time"
+
+	openapi_types "github.com/oapi-codegen/runtime/types"
 )
 
 // FieldError A single field-level validation error.
@@ -65,16 +67,23 @@ type Problem struct {
 	AdditionalProperties map[string]interface{} `json:"-"`
 }
 
-// V1EchoRequest Request body for the echo endpoint. The provided message will be reflected verbatim in the response data.
-type V1EchoRequest struct {
-	// Message The message to echo back. The server will return this value unchanged in the response.
-	Message string `json:"message"`
+// V2RegisterRequest defines model for V2RegisterRequest.
+type V2RegisterRequest struct {
+	// Email The user's email address.
+	Email openapi_types.Email `json:"email"`
+
+	// Name The user's preferred name.
+	Name string `json:"name"`
+
+	// Password The user's chosen password. Must be at least 8 characters long and contain
+	// at least one uppercase letter, one lowercase letter, one digit, and one special character.
+	Password string `json:"password"`
 }
 
-// V1EchoResponse Response data for the echo endpoint. Contains the original message reflected back unchanged from the request, confirming end-to-end request handling through the service.
-type V1EchoResponse struct {
-	// Message The echoed message, returned verbatim from the request. This value will always be identical to the message sent in the request body.
-	Message string `json:"message"`
+// V2RegisterResponse defines model for V2RegisterResponse.
+type V2RegisterResponse struct {
+	// Id The unique identifier for the created user.
+	Id string `json:"id"`
 }
 
 // BadRequestError defines model for BadRequestError.
@@ -167,8 +176,8 @@ type RateLimitError struct {
 	Type string `json:"type"`
 }
 
-// EchoJSONRequestBody defines body for Echo for application/json ContentType.
-type EchoJSONRequestBody = V1EchoRequest
+// V2RegisterJSONRequestBody defines body for V2Register for application/json ContentType.
+type V2RegisterJSONRequestBody = V2RegisterRequest
 
 // Getter for additional properties for Problem. Returns the specified
 // element and whether it was found

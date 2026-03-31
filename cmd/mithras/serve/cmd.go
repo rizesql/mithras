@@ -20,15 +20,15 @@ func Command() *cobra.Command {
 	}
 
 	cmd.Flags().AddFlagSet(mithras.Flags())
-	if err := viper.BindPFlags(cmd.Flags()); err != nil {
-		panic(err)
-	}
-
 	cmd.SilenceUsage = true
 	return cmd
 }
 
 func serve(cmd *cobra.Command, _ []string) error {
+	if err := viper.BindPFlags(cmd.Flags()); err != nil {
+		return fmt.Errorf("failed to bind flags: %w", err)
+	}
+
 	cfg, err := mithras.LoadConfig(viper.GetViper())
 	if err != nil {
 		return fmt.Errorf("failed to load config: %w", err)

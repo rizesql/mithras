@@ -12,7 +12,7 @@ import (
 	"time"
 
 	"github.com/rizesql/mithras/pkg/clock"
-	"github.com/rizesql/mithras/pkg/tracing"
+	"github.com/rizesql/mithras/pkg/logger"
 )
 
 // Dependencies holds the dependencies for the HTTP server.
@@ -87,7 +87,7 @@ func (srv *Server) Mux() *http.ServeMux { return srv.mux }
 func (srv *Server) Serve(ctx context.Context, ln net.Listener) error {
 	srv.mu.Lock()
 	if srv.isListening {
-		tracing.Warn("server.already_listening")
+		logger.Warn("server.already_listening")
 		srv.mu.Unlock()
 		return nil
 	}
@@ -100,19 +100,19 @@ func (srv *Server) Serve(ctx context.Context, ln net.Listener) error {
 	go func() {
 		select {
 		case <-ctx.Done():
-			tracing.Info("server.shutdown_requested")
+			logger.Info("server.shutdown_requested")
 			shutdownCtx, shutdownCancel := context.WithTimeout(context.WithoutCancel(ctx), 30*time.Second)
 			defer shutdownCancel()
 
 			if err := srv.Shutdown(shutdownCtx); err != nil {
-				tracing.Error("server.shutdown_failed",
+				logger.Error("server.shutdown_failed",
 					"error", err.Error())
 			}
 		case <-serverCtx.Done():
 		}
 	}()
 
-	tracing.Info("server.listening",
+	logger.Info("server.listening",
 		"srv", "http",
 		"addr", ln.Addr().String())
 	err := srv.srv.Serve(ln)
@@ -120,7 +120,7 @@ func (srv *Server) Serve(ctx context.Context, ln net.Listener) error {
 	cancel()
 
 	if err != nil && !errors.Is(err, http.ErrServerClosed) {
-		tracing.Error("server.listen_failed", "error", err)
+		logger.Error("server.listen_failed", "error", err)
 		return err
 	}
 	return nil
@@ -130,7 +130,7 @@ func (srv *Server) Serve(ctx context.Context, ln net.Listener) error {
 func (srv *Server) RegisterRoute(route Route, middlewares ...Middleware) {
 	path := route.Path()
 	method := route.Method()
-	tracing.Info("server.register_route",
+	logger.Info("server.register_route",
 		"method", method,
 		"path", path)
 
@@ -146,6 +146,20 @@ func (srv *Server) RegisterRoute(route Route, middlewares ...Middleware) {
 
 	readBody := methodHasBody(method)
 
+	// Wrap the chain so that error handling runs inside the middleware stack.
+	// This ensures that when middleware defers fire (e.g. to capture status code),
+	// the error handler has already written the actual HTTP status.
+	withErrHandling := func(next HandleFunc) HandleFunc {
+		return func(ctx context.Context, c *Context) error {
+			err := next(ctx, c)
+			if err != nil {
+				srv.errHandler(c, err)
+			}
+			return nil
+		}
+	}
+	wrapped := withErrHandling(chain)
+
 	srv.mux.HandleFunc(pattern, func(w http.ResponseWriter, r *http.Request) {
 		c := srv.acquire()
 		defer func() {
@@ -154,14 +168,13 @@ func (srv *Server) RegisterRoute(route Route, middlewares ...Middleware) {
 		}()
 
 		if err := c.Init(w, r, srv.config.MaxRequestBodySize, readBody, srv.clock); err != nil {
-			tracing.Error("server.init_context_failed", "error", err)
+			logger.Error("server.init_context_failed", "error", err)
 			srv.errHandler(c, err)
 			return
 		}
 
-		if err := chain(withContext(r.Context(), c), c); err != nil {
-			srv.errHandler(c, err)
-		}
+		//nolint:errcheck // errors already handled by withErrHandling above
+		_ = wrapped(withContext(r.Context(), c), c)
 	})
 }
 

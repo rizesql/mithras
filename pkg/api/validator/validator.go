@@ -12,8 +12,8 @@ import (
 	oapivalidator "github.com/pb33f/libopenapi-validator"
 	"github.com/pb33f/libopenapi-validator/config"
 
+	"github.com/rizesql/mithras/internal/errkit"
 	"github.com/rizesql/mithras/pkg/api"
-	"github.com/rizesql/mithras/pkg/errkit"
 )
 
 // ValidationErrors is a slice of api.FieldError that implements the error interface.

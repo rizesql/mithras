@@ -13,6 +13,7 @@
       delve
       golangci-lint
 
+      goreleaser
       hl-log-viewer
       just
     ];

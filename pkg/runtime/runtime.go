@@ -13,7 +13,7 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/rizesql/mithras/pkg/tracing"
+	"github.com/rizesql/mithras/pkg/logger"
 )
 
 // RunFunc is a long-running task that respects context cancellation.
@@ -67,7 +67,7 @@ func New(ctx context.Context) *Runtime {
 // Recover handles panics in goroutines and logs the stack trace.
 func (rt *Runtime) Recover() {
 	if recovered := recover(); recovered != nil {
-		tracing.Error("panic",
+		logger.Error("panic",
 			"panic", recovered,
 			"stack", string(debug.Stack()),
 		)
@@ -91,7 +91,7 @@ func (rt *Runtime) Go(fn RunFunc) {
 		defer rt.Recover()
 
 		if err := fn(rt.ctx); err != nil && !errors.Is(err, context.Canceled) {
-			tracing.Error("runtime.task_failed",
+			logger.Error("runtime.task_failed",
 				"error", err)
 
 			select {
@@ -169,7 +169,7 @@ func WithReadinessTimeout(d time.Duration) RunOption {
 // Run starts the runtime and blocks until shutdown.
 // It listens for signals, context cancellation, or task errors.
 // Returns an error if shutdown failed or a task errored.
-func (rt *Runtime) Run(opts ...RunOption) error {
+func (rt *Runtime) Run(ctx context.Context, opts ...RunOption) error {
 	cfg := RunConfig{
 		Timeout:          30 * time.Second,
 		Signals:          []os.Signal{syscall.SIGINT, syscall.SIGTERM},
@@ -190,7 +190,7 @@ func (rt *Runtime) Run(opts ...RunOption) error {
 	rt.health.mu.Unlock()
 	rt.mu.Unlock()
 
-	tracing.Info("runtime.started",
+	logger.Info("runtime.started",
 		"timeout", cfg.Timeout,
 		"readiness_timeout", cfg.ReadinessTimeout,
 	)
@@ -211,9 +211,9 @@ func (rt *Runtime) Run(opts ...RunOption) error {
 	}
 
 	if err != nil {
-		tracing.Error("runtime.shutdown_with_error", "error", err)
+		logger.Error("runtime.shutdown_with_error", "error", err)
 	} else {
-		tracing.Info("runtime.shutting_down", "reason", reason)
+		logger.Info("runtime.shutting_down", "reason", reason)
 	}
 
 	rt.mu.Lock()
@@ -223,7 +223,7 @@ func (rt *Runtime) Run(opts ...RunOption) error {
 
 	rt.cancel()
 
-	shutdownCtx, cancelShutdown := context.WithTimeout(context.Background(), cfg.Timeout)
+	shutdownCtx, cancelShutdown := context.WithTimeout(ctx, cfg.Timeout)
 	defer cancelShutdown()
 
 	workersDone := make(chan struct{})
@@ -234,9 +234,9 @@ func (rt *Runtime) Run(opts ...RunOption) error {
 
 	select {
 	case <-workersDone:
-		tracing.Info("runtime.all_tasks_exited")
+		logger.Info("runtime.all_tasks_exited")
 	case <-shutdownCtx.Done():
-		tracing.Error("runtime.shutdown_timeout")
+		logger.Error("runtime.shutdown_timeout")
 	}
 
 	var errs []error
@@ -249,7 +249,7 @@ func (rt *Runtime) Run(opts ...RunOption) error {
 			continue
 		}
 		if err := cl(shutdownCtx); err != nil {
-			tracing.Error("runtime.cleanup_failed",
+			logger.Error("runtime.cleanup_failed",
 				"error", err)
 			errs = append(errs, err)
 		}
@@ -257,10 +257,10 @@ func (rt *Runtime) Run(opts ...RunOption) error {
 
 	if len(errs) > 0 {
 		finalErr := errors.Join(errs...)
-		tracing.Error("runtime.shutdown_completed_with_errors", "error", finalErr)
+		logger.Error("runtime.shutdown_completed_with_errors", "error", finalErr)
 		return finalErr
 	}
 
-	tracing.Info("runtime.shutdown_complete")
+	logger.Info("runtime.shutdown_complete")
 	return nil
 }

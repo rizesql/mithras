@@ -9,14 +9,28 @@ import (
 )
 
 type Querier interface {
-	//ListPost
+	//InsertCredential
 	//
-	//  SELECT pk, id, title, body, created_at, updated_at
-	//  FROM post
-	//  WHERE pk > $2
-	//  ORDER BY pk ASC
-	//  LIMIT $1
-	ListPost(ctx context.Context, db DBTX, arg ListPostParams) ([]Post, error)
+	//  INSERT INTO "credential_password" (
+	//    user_id,
+	//    secret
+	//  ) VALUES  (
+	//    $1,
+	//    $2
+	//  )
+	InsertCredential(ctx context.Context, db DBTX, arg InsertCredentialParams) error
+	//InsertUser
+	//
+	//  INSERT INTO "user" (
+	//    id,
+	//    name,
+	//    email
+	//  ) values (
+	//    $1,
+	//    $2,
+	//    $3
+	//  )
+	InsertUser(ctx context.Context, db DBTX, arg InsertUserParams) error
 }
 
 var _ Querier = (*Queries)(nil)

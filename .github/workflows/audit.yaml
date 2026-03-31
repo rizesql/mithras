@@ -21,8 +21,8 @@ jobs:
       - uses: actions/checkout@v6
       - uses: ./.github/actions/setup-nix
 
-      - run: nix develop --command govulncheck ./...
-      - run: nix develop --command gosec ./...
+      - run: nix develop --command go tool govulncheck ./...
+      - run: nix develop --command go tool gosec -exclude-generated ./...
 
   update-deps:
     name: Update Go dependencies
@@ -32,8 +32,10 @@ jobs:
       - uses: actions/checkout@v6
       - uses: ./.github/actions/setup-nix
 
-      - name: Tidy
-        run: nix develop --command go mod tidy
+      - name: Update and Tidy
+        run: |
+          nix develop --command go get -u ./...
+          nix develop --command go mod tidy
 
       - name: Validate after update
         run: nix flake check

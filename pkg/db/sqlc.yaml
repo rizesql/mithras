@@ -20,7 +20,17 @@ sql:
         output_db_file_name: "delete_me"
 
         overrides:
-          - db_type: "post_id"
+          - db_type: "user_id"
             go_type:
               import: "github.com/rizesql/mithras/pkg/idkit"
-              type: "PostID"
+              type: "UserID"
+
+          - column: "user.email"
+            go_type:
+              import: "github.com/rizesql/mithras/internal/email"
+              type: "Address"
+
+          - column: "credential_password.secret"
+            go_type:
+              import: "github.com/rizesql/mithras/internal/password"
+              type: "Hashed"

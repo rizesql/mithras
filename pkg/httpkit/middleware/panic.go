@@ -3,13 +3,14 @@ package middleware
 import (
 	"context"
 	"fmt"
-	"log/slog"
 	"net/http"
 	"runtime/debug"
 
-	"github.com/rizesql/mithras/pkg/errkit"
+	"go.opentelemetry.io/otel/attribute"
+
+	"github.com/rizesql/mithras/internal/errkit"
 	"github.com/rizesql/mithras/pkg/httpkit"
-	"github.com/rizesql/mithras/pkg/tracing"
+	"github.com/rizesql/mithras/pkg/telemetry"
 )
 
 // WithPanicRecovery returns a middleware that recovers from panics and returns a 500 response.
@@ -23,7 +24,7 @@ func WithPanicRecovery() httpkit.Middleware {
 					}
 
 					stack := debug.Stack()
-					tracing.Attr(ctx, slog.String("panic_stack", string(stack)))
+					telemetry.Attr(ctx, attribute.String("panic_stack", string(stack)))
 					err = errkit.Wrap(
 						fmt.Errorf("panic: %v", r),
 						errkit.Code(errkit.App.Internal.Code("panic")),

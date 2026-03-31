@@ -11,8 +11,8 @@ import (
 	"strings"
 	"time"
 
+	"github.com/rizesql/mithras/internal/errkit"
 	"github.com/rizesql/mithras/pkg/clock"
-	"github.com/rizesql/mithras/pkg/errkit"
 	"github.com/rizesql/mithras/pkg/idkit"
 )
 
@@ -62,6 +62,11 @@ func (res *Response) StatusCode() int { return res.w.statusCode }
 // AddHeader adds a header to the response.
 func (res *Response) AddHeader(key, val string) {
 	res.w.Header().Add(key, val)
+}
+
+// SetHeader sets a header in the response.
+func (res *Response) SetHeader(key, val string) {
+	res.w.Header().Set(key, val)
 }
 
 func (res *Response) send(status int, body []byte) error {

@@ -2,7 +2,7 @@ package retry
 
 import (
 	"math"
-	"math/rand"
+	"math/rand/v2"
 	"time"
 )
 
@@ -19,9 +19,6 @@ func LinBackoff(delay time.Duration) BackoffFunc {
 }
 
 func ExpBackoff(init time.Duration, mult, randFactor float64, maxInterval time.Duration) BackoffFunc {
-	// #nosec G404
-	r := rand.New(rand.NewSource(time.Now().UnixNano()))
-
 	return func(n int) time.Duration {
 		if n < 1 {
 			n = 1
@@ -31,7 +28,9 @@ func ExpBackoff(init time.Duration, mult, randFactor float64, maxInterval time.D
 		curr = math.Min(curr, float64(maxInterval))
 
 		delta := randFactor * curr
-		jitter := curr - delta + 2*delta*r.Float64()
+		//nolint gosec
+		// #nosec G404
+		jitter := curr - delta + 2*delta*rand.Float64()
 
 		return time.Duration(jitter)
 	}
