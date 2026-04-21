@@ -11,8 +11,8 @@ import (
 	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/jackc/pgx/v5/pgxpool"
 
-	"github.com/rizesql/mithras/pkg/logger"
 	"github.com/rizesql/mithras/pkg/retry"
+	"github.com/rizesql/mithras/pkg/telemetry/logger"
 )
 
 //go:embed migrations/*.sql
@@ -29,7 +29,7 @@ type Queries struct{}
 var Query Querier = &Queries{}
 
 type Database struct {
-	pool       *pgxpool.Pool
+	*pgxpool.Pool
 	maxRetries int
 }
 
@@ -47,6 +47,7 @@ func New(ctx context.Context, cfg *Config) (*Database, error) {
 	}
 
 	logger.Info("db.pool.ping")
+
 	err = ping(ctx, pool)
 	if err != nil {
 		pool.Close()
@@ -54,8 +55,9 @@ func New(ctx context.Context, cfg *Config) (*Database, error) {
 	}
 
 	logger.Info("db.pool.connected")
+
 	return &Database{
-		pool:       pool,
+		Pool:       pool,
 		maxRetries: cfg.MaxRetries,
 	}, nil
 }
@@ -72,15 +74,18 @@ func applyConfig(cfg *Config) (*pgxpool.Config, error) {
 		if poolCfg.ConnConfig.RuntimeParams == nil {
 			poolCfg.ConnConfig.RuntimeParams = make(map[string]string)
 		}
+
 		poolCfg.ConnConfig.RuntimeParams["search_path"] = cfg.SchemaName
 	}
 
 	if cfg.MaxConnections > 0 {
 		poolCfg.MaxConns = cfg.MaxConnections
 	}
+
 	if cfg.MinConnections > 0 {
 		poolCfg.MinConns = cfg.MinConnections
 	}
+
 	if cfg.MinIdleConnections > 0 {
 		poolCfg.MinIdleConns = cfg.MinIdleConnections
 	}
@@ -97,6 +102,7 @@ func applyConfig(cfg *Config) (*pgxpool.Config, error) {
 	if cfg.HealthCheckPeriod > 0 {
 		poolCfg.HealthCheckPeriod = cfg.HealthCheckPeriod
 	}
+
 	if cfg.ConnectTimeout > 0 {
 		poolCfg.ConnConfig.ConnectTimeout = cfg.ConnectTimeout
 	}
@@ -129,9 +135,11 @@ func ping(ctx context.Context, pool *pgxpool.Pool) error {
 		func(ctx context.Context) error {
 			attemptCtx, attemptCancel := context.WithTimeout(ctx, 2*time.Second)
 			defer attemptCancel()
+
 			if err := pool.Ping(attemptCtx); err != nil {
 				return fmt.Errorf("database ping failed: %w", err)
 			}
+
 			return nil
 		},
 	)
@@ -143,8 +151,8 @@ func ping(ctx context.Context, pool *pgxpool.Pool) error {
 }
 
 func (db *Database) Close() error {
-	if db.pool != nil {
-		db.pool.Close()
+	if db != nil && db.Pool != nil {
+		db.Pool.Close()
 	}
 
 	return nil
@@ -154,8 +162,9 @@ func (db *Database) IsReady(ctx context.Context) (bool, error) {
 	ctx, cancel := context.WithTimeout(ctx, 2*time.Second)
 	defer cancel()
 
-	if err := db.pool.Ping(ctx); err != nil {
+	if err := db.Ping(ctx); err != nil {
 		return false, err
 	}
+
 	return true, nil
 }

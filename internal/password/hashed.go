@@ -34,6 +34,10 @@ var phcPrefix = fmt.Sprintf(
 	argon2.Version, argon2id.memory, argon2id.time, argon2id.threads,
 )
 
+// dummyHash is used for timing attack mitigation. It matches the Argon2id parameters
+// used by this package (m=64MB, t=2, p=2).
+const dummyHash = "$argon2id$v=19$m=65536,t=2,p=2$ZHVtbXktc2FsdC0xNi1ieQ$dGhpcy1pcy1hLWR1bW15LTMyLWJ5dGUtaGFzaC0hISEh"
+
 type Hashed struct {
 	value string
 }
@@ -46,7 +50,14 @@ func (r Raw) Hash() (Hashed, error) {
 		return Hashed{}, err
 	}
 
-	hash := argon2.IDKey([]byte(r.value), salt, argon2id.time, argon2id.memory, argon2id.threads, keyLen)
+	hash := argon2.IDKey(
+		[]byte(r.value),
+		salt,
+		argon2id.time,
+		argon2id.memory,
+		argon2id.threads,
+		keyLen,
+	)
 
 	b64Salt := base64.RawStdEncoding.EncodeToString(salt)
 	b64Hash := base64.RawStdEncoding.EncodeToString(hash)
@@ -55,52 +66,56 @@ func (r Raw) Hash() (Hashed, error) {
 	return Hashed{value: encoded}, nil
 }
 
-func (h Hashed) Verify(rhs string) (bool, error) {
-	d, err := decode(h.value)
+func (h Hashed) Verify(raw Raw) (bool, error) {
+	target := h.value
+	if target == "" {
+		target = dummyHash
+	}
+
+	dec, err := decode(target)
 	if err != nil {
 		return false, err
 	}
 
-	if d.algorithm != "argon2id" {
+	if dec.algorithm != "argon2id" {
 		return false, errors.New("unsupported algorithm")
 	}
-	if d.version != argon2.Version {
+
+	if dec.version != argon2.Version {
 		return false, errors.New("incompatible version")
 	}
 
-	if len(d.hash) > 256 {
-		return false, errors.New("hash length exceeds reasonable bounds")
-	}
-
 	computed := argon2.IDKey(
-		[]byte(rhs),
-		d.salt,
-		d.time,
-		d.memory,
-		d.threads,
-		//nolint:gosec // already checked d.hash is not too long
-		// #nosec G115
-		uint32(len(d.hash)),
+		[]byte(raw.value),
+		dec.salt,
+		dec.time,
+		dec.memory,
+		dec.threads,
+		uint32(len(dec.hash)),
 	)
 
-	eq := subtle.ConstantTimeCompare(d.hash, computed) == 1
+	match := subtle.ConstantTimeCompare(dec.hash, computed) == 1
 
-	return eq, nil
+	if h.value == "" {
+		return false, nil
+	}
+
+	return match, nil
 }
 
 func (h Hashed) NeedsRehash() (bool, error) {
-	d, err := decode(h.value)
+	dec, err := decode(h.value)
 	if err != nil {
 		return true, err
 	}
 
-	if d.algorithm != "argon2id" {
+	if dec.algorithm != "argon2id" {
 		return true, nil
 	}
 
-	if d.memory != argon2id.memory ||
-		d.time != argon2id.time ||
-		d.threads != argon2id.threads {
+	if dec.memory != argon2id.memory ||
+		dec.time != argon2id.time ||
+		dec.threads != argon2id.threads {
 		return true, nil
 	}
 
@@ -125,13 +140,13 @@ func (h Hashed) Value() (driver.Value, error) {
 }
 
 type decodedHash struct {
-	algorithm string
-	version   int
-	memory    uint32
-	time      uint32
-	threads   uint8
 	salt      []byte
 	hash      []byte
+	time      uint32
+	memory    uint32
+	algorithm string
+	version   int
+	threads   uint8
 }
 
 func decode(value string) (decodedHash, error) {
@@ -140,28 +155,28 @@ func decode(value string) (decodedHash, error) {
 		return decodedHash{}, errors.New("invalid hash format")
 	}
 
-	var d decodedHash
-	d.algorithm = parts[1]
+	var dec decodedHash
+	dec.algorithm = parts[1]
 
-	n, err := fmt.Sscanf(parts[2], "v=%d", &d.version)
+	n, err := fmt.Sscanf(parts[2], "v=%d", &dec.version)
 	if err != nil || n != 1 {
 		return decodedHash{}, errors.New("invalid version format")
 	}
 
-	n, err = fmt.Sscanf(parts[3], "m=%d,t=%d,p=%d", &d.memory, &d.time, &d.threads)
+	n, err = fmt.Sscanf(parts[3], "m=%d,t=%d,p=%d", &dec.memory, &dec.time, &dec.threads)
 	if err != nil || n != 3 {
 		return decodedHash{}, errors.New("invalid parameter format")
 	}
 
-	d.salt, err = base64.RawStdEncoding.DecodeString(parts[4])
+	dec.salt, err = base64.RawStdEncoding.DecodeString(parts[4])
 	if err != nil {
 		return decodedHash{}, err
 	}
 
-	d.hash, err = base64.RawStdEncoding.DecodeString(parts[5])
+	dec.hash, err = base64.RawStdEncoding.DecodeString(parts[5])
 	if err != nil {
 		return decodedHash{}, err
 	}
 
-	return d, nil
+	return dec, nil
 }

@@ -9,12 +9,11 @@ import (
 	"context"
 
 	"github.com/rizesql/mithras/internal/password"
-	"github.com/rizesql/mithras/pkg/idkit"
 )
 
 const insertCredential = `-- name: InsertCredential :exec
 INSERT INTO "credential_password" (
-  user_id,
+  user_pk,
   secret
 ) VALUES  (
   $1,
@@ -23,20 +22,47 @@ INSERT INTO "credential_password" (
 `
 
 type InsertCredentialParams struct {
-	UserID idkit.UserID    `db:"user_id"`
+	UserPk int64           `db:"user_pk"`
 	Secret password.Hashed `db:"secret"`
 }
 
 // InsertCredential
 //
 //	INSERT INTO "credential_password" (
-//	  user_id,
+//	  user_pk,
 //	  secret
 //	) VALUES  (
 //	  $1,
 //	  $2
 //	)
 func (q *Queries) InsertCredential(ctx context.Context, db DBTX, arg InsertCredentialParams) error {
-	_, err := db.Exec(ctx, insertCredential, arg.UserID, arg.Secret)
+	_, err := db.Exec(ctx, insertCredential, arg.UserPk, arg.Secret)
+	return err
+}
+
+const updateCredentialByUserId = `-- name: UpdateCredentialByUserId :exec
+UPDATE "credential_password"
+SET
+  secret = $1,
+  updated_at = now()
+WHERE
+  user_pk = $2
+`
+
+type UpdateCredentialByUserIdParams struct {
+	Secret password.Hashed `db:"secret"`
+	UserPk int64           `db:"user_pk"`
+}
+
+// UpdateCredentialByUserId
+//
+//	UPDATE "credential_password"
+//	SET
+//	  secret = $1,
+//	  updated_at = now()
+//	WHERE
+//	  user_pk = $2
+func (q *Queries) UpdateCredentialByUserId(ctx context.Context, db DBTX, arg UpdateCredentialByUserIdParams) error {
+	_, err := db.Exec(ctx, updateCredentialByUserId, arg.Secret, arg.UserPk)
 	return err
 }

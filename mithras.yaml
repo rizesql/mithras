@@ -1,0 +1,34 @@
+http_port: 8080
+issuer: http://localhost:8080
+
+auth:
+  kek: 2DFRAbAvT4gli3L53JGPhfrZtlj7jm1ICp6vIqCAXl0=
+
+db:
+  uri: postgres://user:password@localhost:5432/mithras?sslmode=disable
+  schema_name: public
+  migrations_table: mithras_schema_migrations
+
+ratelimit:
+  type: redis
+  redis:
+    url: redis://localhost:6379/0
+
+tracing:
+  enabled: true
+  exporter: otlp
+
+metrics:
+  enabled: true
+  exporter: otlp
+
+logs:
+  enabled: true
+  level: info
+  format: json
+  exporters:
+    - type: stdout
+    - type: otlp
+      endpoint: localhost:4317
+      protocol: grpc
+      insecure: true

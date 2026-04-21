@@ -1,0 +1,56 @@
+paths:
+  get:
+    tags: [auth]
+    security: []
+    operationId: authorize
+
+    summary: Authorization Endpoint
+    description: |
+      Initiates the OAuth 2.1 Authorization Code Flow with PKCE.
+      This endpoint redirects the user to the login page and stashes the
+      OAuth state in a secure cookie.
+
+    parameters:
+      - name: response_type
+        in: query
+        required: true
+        schema:
+          type: string
+          enum: [code]
+      - name: client_id
+        in: query
+        required: true
+        schema:
+          type: string
+      - name: redirect_uri
+        in: query
+        required: true
+        schema:
+          type: string
+          format: uri
+      - name: state
+        in: query
+        required: false
+        schema:
+          type: string
+      - name: code_challenge
+        in: query
+        required: true
+        schema:
+          type: string
+      - name: code_challenge_method
+        in: query
+        required: true
+        schema:
+          type: string
+          enum: [S256]
+
+    responses:
+      "302":
+        description: Redirect to login page.
+      "400":
+        $ref: "../lib/errors.yaml#/BadRequestError"
+      "429":
+        $ref: "../lib/errors.yaml#/RateLimitError"
+      "500":
+        $ref: "../lib/errors.yaml#/InternalServerError"

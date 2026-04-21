@@ -64,6 +64,22 @@ func KeyBodyValue(field string, sanitizer ...func(string) string) KeyFunc {
 	}
 }
 
+// KeyFormValue keys on a named field from a URL encoded form submission.
+func KeyFormValue(field string, sanitizer ...func(string) string) KeyFunc {
+	sanitizeFunc := noop[string]
+	if len(sanitizer) > 0 {
+		sanitizeFunc = sanitizer[0]
+	}
+
+	return func(_ context.Context, c *httpkit.Context) string {
+		val := c.Req().Raw().FormValue(field)
+		if val == "" {
+			return ""
+		}
+		return sanitizeFunc(val)
+	}
+}
+
 // KeyHeader keys on an arbitrary HTTP header value.
 func KeyHeader(name string) KeyFunc {
 	return func(_ context.Context, c *httpkit.Context) string {

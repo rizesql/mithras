@@ -15,6 +15,7 @@ func (s Scope) Scope(name string) Scope {
 	if s.path == "" {
 		return Scope{path: name}
 	}
+
 	return Scope{path: s.path + "." + name}
 }
 
@@ -30,17 +31,19 @@ var (
 	}
 
 	App = AppScope{
-		Scope:      Scope{"app"},
-		Internal:   Scope{"app.internal"},
-		Validation: Scope{"app.validation"},
-		DB:         Scope{"app.db"},
-		Resource:   Scope{"app.resource"},
-		Dependency: Scope{"app.dependency"},
+		Scope:       Scope{"app"},
+		Internal:    Scope{"app.internal"},
+		Validation:  Scope{"app.validation"},
+		DB:          Scope{"app.db"},
+		Resource:    Scope{"app.resource"},
+		Dependency:  Scope{"app.dependency"},
+		Unavailable: Scope{"app.unavailable"},
 	}
 
 	System = SystemScope{
-		Scope:   Scope{"system"},
-		Timeout: Scope{"system.timeout"},
+		Scope:       Scope{"system"},
+		Timeout:     Scope{"system.timeout"},
+		Unavailable: Scope{"system.unavailable"},
 	}
 )
 
@@ -57,15 +60,17 @@ type UserScope struct {
 // AppScope contains application-related error scopes.
 type AppScope struct {
 	Scope
-	Internal   Scope
-	Validation Scope
-	DB         Scope
-	Resource   Scope
-	Dependency Scope
+	Internal    Scope
+	Validation  Scope
+	DB          Scope
+	Resource    Scope
+	Dependency  Scope
+	Unavailable Scope
 }
 
 // SystemScope contains system-level error scopes.
 type SystemScope struct {
 	Scope
-	Timeout Scope
+	Timeout     Scope
+	Unavailable Scope
 }

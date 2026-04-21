@@ -12,7 +12,7 @@ import (
 	"github.com/rizesql/mithras/pkg/idkit"
 )
 
-const insertUser = `-- name: InsertUser :exec
+const insertUser = `-- name: InsertUser :one
 INSERT INTO "user" (
   id,
   name,
@@ -22,6 +22,7 @@ INSERT INTO "user" (
   $2,
   $3
 )
+RETURNING pk
 `
 
 type InsertUserParams struct {
@@ -41,7 +42,10 @@ type InsertUserParams struct {
 //	  $2,
 //	  $3
 //	)
-func (q *Queries) InsertUser(ctx context.Context, db DBTX, arg InsertUserParams) error {
-	_, err := db.Exec(ctx, insertUser, arg.ID, arg.Name, arg.Email)
-	return err
+//	RETURNING pk
+func (q *Queries) InsertUser(ctx context.Context, db DBTX, arg InsertUserParams) (int64, error) {
+	row := db.QueryRow(ctx, insertUser, arg.ID, arg.Name, arg.Email)
+	var pk int64
+	err := row.Scan(&pk)
+	return pk, err
 }

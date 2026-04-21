@@ -10,78 +10,378 @@ info:
 servers:
     - url: http://localhost:8080
 paths:
-    /v2/register:
-        post:
+    /.well-known/jwks.json:
+        get:
             tags:
-                - iam
+                - well-known
             security: []
-            operationId: v2.register
-            summary: Register
+            operationId: jwks
+            summary: JSON Web Key Set
             description: |
-                TODO
-            requestBody:
-                required: true
-                content:
-                    application/json:
-                        schema:
-                            $ref: "#/components/schemas/V2RegisterRequest"
+                Returns the public keys used to verify issued JWTs.
             responses:
-                "201":
-                    description: User registered successfully.
-                    headers:
-                        X-Request-Id:
-                            $ref: "#/components/headers/X-Request-Id"
+                "200":
+                    description: JWKS response
                     content:
                         application/json:
                             schema:
-                                $ref: "#/components/schemas/V2RegisterResponse"
+                                $ref: "#/components/schemas/JWKS"
+                "429":
+                    $ref: "#/components/responses/RateLimitError"
+                "500":
+                    $ref: "#/components/responses/InternalServerError"
+    /.well-known/oauth-authorization-server:
+        get:
+            tags:
+                - well-known
+            security: []
+            operationId: oauthServerMetadata
+            summary: OAuth 2.0 Authorization Server Metadata
+            description: |
+                RFC 8414 Authorization Server Metadata. Clients fetch this endpoint once
+                to discover the token endpoint, JWKS URI, and supported capabilities.
+            responses:
+                "200":
+                    description: Authorization server metadata.
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/OAuthServerMetadata"
+                "429":
+                    $ref: "#/components/responses/RateLimitError"
+                "500":
+                    $ref: "#/components/responses/InternalServerError"
+    /authorize:
+        get:
+            tags: [auth]
+            security: []
+            operationId: authorize
+            summary: Authorization Endpoint
+            description: |
+                Initiates the OAuth 2.1 Authorization Code Flow with PKCE.
+                This endpoint redirects the user to the login page and stashes the
+                OAuth state in a secure cookie.
+            parameters:
+                - name: response_type
+                  in: query
+                  required: true
+                  schema:
+                    type: string
+                    enum: [code]
+                - name: client_id
+                  in: query
+                  required: true
+                  schema:
+                    type: string
+                - name: redirect_uri
+                  in: query
+                  required: true
+                  schema:
+                    type: string
+                    format: uri
+                - name: state
+                  in: query
+                  required: false
+                  schema:
+                    type: string
+                - name: code_challenge
+                  in: query
+                  required: true
+                  schema:
+                    type: string
+                - name: code_challenge_method
+                  in: query
+                  required: true
+                  schema:
+                    type: string
+                    enum: [S256]
+            responses:
+                "302":
+                    description: Redirect to login page.
                 "400":
                     $ref: "#/components/responses/BadRequestError"
                 "429":
                     $ref: "#/components/responses/RateLimitError"
                 "500":
                     $ref: "#/components/responses/InternalServerError"
-security:
-    - rootKey: []
+    /token:
+        post:
+            tags: [auth]
+            security: []
+            operationId: token
+            summary: Token Endpoint
+            description: |
+                Exchanges an authorization code for access and refresh tokens,
+                or rotates a refresh token. Supports OAuth 2.1 authorization_code
+                and refresh_token grants.
+            requestBody:
+                required: true
+                content:
+                    application/x-www-form-urlencoded:
+                        schema:
+                            $ref: "#/components/schemas/TokenRequest"
+            responses:
+                "200":
+                    description: Successful token exchange.
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/TokenResponse"
+                "400":
+                    $ref: "#/components/responses/BadRequestError"
+                "401":
+                    $ref: "#/components/responses/UnauthorizedError"
+                "429":
+                    $ref: "#/components/responses/RateLimitError"
+                "500":
+                    $ref: "#/components/responses/InternalServerError"
+    /register:
+        post:
+            tags:
+                - auth
+            security: []
+            operationId: register
+            summary: Register
+            description: |
+                Creates a new user account.
+            requestBody:
+                required: true
+                content:
+                    application/json:
+                        schema:
+                            $ref: "#/components/schemas/RegisterRequest"
+            responses:
+                "302":
+                    description: Redirects to the client's redirect URI with an authorization code.
+                "303":
+                    description: Redirect back to register form with error
+                # "201":
+                #   description: User registered successfully.
+                #   headers:
+                #     X-Request-Id:
+                #       $ref: "../lib/headers.yaml#/X-Request-Id"
+                #   content:
+                #     application/json:
+                #       schema:
+                #         $ref: "#/components/schemas/RegisterResponse"
+
+                "400":
+                    $ref: "#/components/responses/BadRequestError"
+                "429":
+                    $ref: "#/components/responses/RateLimitError"
+                "500":
+                    $ref: "#/components/responses/InternalServerError"
+    /login:
+        post:
+            tags:
+                - auth
+            security: []
+            operationId: login
+            summary: Login
+            description: |
+                Authenticates a user using their email and password. Returns a short-lived
+                Ed25519-signed Access Token and a long-lived stateful Refresh Token upon success.
+            requestBody:
+                required: true
+                content:
+                    application/json:
+                        schema:
+                            $ref: "#/components/schemas/LoginRequest"
+            responses:
+                "302":
+                    description: Redirects to the client's redirect URI with an authorization code.
+                # "200":
+                #   description: Successful login. Returns access and refresh tokens.
+                #   content:
+                #     application/json:
+                #       schema:
+                #         $ref: "#/components/schemas/LoginResponse"
+                "303":
+                    description: Redirect back to login with generic error on failure
+                "400":
+                    $ref: "#/components/responses/BadRequestError"
+                "401":
+                    $ref: "#/components/responses/UnauthorizedError"
+                "403":
+                    $ref: "#/components/responses/ForbiddenError"
+                "429":
+                    $ref: "#/components/responses/RateLimitError"
+                "500":
+                    $ref: "#/components/responses/InternalServerError"
+    /forgot-password:
+        post:
+            tags: [auth]
+            security: []
+            operationId: forgotPassword
+            summary: Forgot Password Request
+            description: |
+                Initiates the password reset flow. Sends a reset link to the provided
+                email address if an account with that email exists.
+            requestBody:
+                required: true
+                content:
+                    application/json:
+                        schema:
+                            $ref: "#/components/schemas/ForgotPasswordRequest"
+            responses:
+                "202":
+                    description: Request processed.
+                "400":
+                    $ref: "#/components/responses/BadRequestError"
+                "429":
+                    $ref: "#/components/responses/RateLimitError"
+                "500":
+                    $ref: "#/components/responses/InternalServerError"
+    /reset-password:
+        post:
+            tags: [auth]
+            security: []
+            operationId: resetPassword
+            summary: Reset Password
+            description: |
+                Completes the password reset flow using a valid reset token.
+                Changes the user's password to the new one provided.
+            requestBody:
+                required: true
+                content:
+                    application/json:
+                        schema:
+                            $ref: "#/components/schemas/ResetPasswordRequest"
+            responses:
+                "200":
+                    description: Password reset successful.
+                    content:
+                        application/json:
+                            schema:
+                                type: object
+                "400":
+                    $ref: "#/components/responses/BadRequestError"
+                "429":
+                    $ref: "#/components/responses/RateLimitError"
+                "500":
+                    $ref: "#/components/responses/InternalServerError"
 components:
+    securitySchemes:
+        jwtBearerAuth:
+            type: http
+            scheme: bearer
+            bearerFormat: JWT
+            description: |
+                Short-lived Ed25519-signed Access Token.
+                Provide this token in the `Authorization: Bearer <token>` header for standard API requests.
+        refreshBearerAuth:
+            type: http
+            scheme: bearer
+            description: |
+                Long-lived opaque Refresh Token.
+                Provide this token in the `Authorization: Bearer <token>` header exclusively for the `/v2/refresh` endpoint.
     schemas:
-        V2RegisterRequest:
+        JWKOkp:
             type: object
             required:
-                - name
-                - email
-                - password
-            additionalProperties: false
+                - kty
+                - alg
+                - kid
+                - crv
+                - x
             properties:
-                name:
-                    description: The user's preferred name.
+                kty:
                     type: string
-                    minLength: 1
-                    maxLength: 255
-                    example: Alice
-                email:
-                    description: The user's email address.
+                    enum:
+                        - OKP
+                alg:
                     type: string
-                    format: email
-                    example: alice@mithras.com
-                password:
-                    description: |
-                        The user's chosen password. Must be at least 8 characters long and contain
-                        at least one uppercase letter, one lowercase letter, one digit, and one special character.
+                    enum:
+                        - EdDSA
+                kid:
                     type: string
-                    format: password
-                    minLength: 8
-                    maxLength: 256
-        V2RegisterResponse:
+                crv:
+                    type: string
+                    enum:
+                        - Ed25519
+                        - Ed448
+                x:
+                    type: string
+        JWKEc:
             type: object
             required:
-                - id
-            additionalProperties: false
+                - kty
+                - alg
+                - kid
+                - crv
+                - x
+                - y
             properties:
-                id:
-                    description: The unique identifier for the created user.
+                kty:
                     type: string
-                    example: usr_24abcde1234567890fgh
+                    enum:
+                        - EC
+                alg:
+                    type: string
+                    enum:
+                        - ES256
+                        - ES384
+                        - ES512
+                kid:
+                    type: string
+                crv:
+                    type: string
+                    enum:
+                        - P-256
+                        - P-384
+                        - P-521
+                x:
+                    type: string
+                y:
+                    type: string
+        JWKRsa:
+            type: object
+            required:
+                - kty
+                - alg
+                - kid
+                - n
+                - e
+            properties:
+                kty:
+                    type: string
+                    enum:
+                        - RSA
+                alg:
+                    type: string
+                    enum:
+                        - RS256
+                        - RS384
+                        - RS512
+                        - PS256
+                        - PS384
+                        - PS512
+                kid:
+                    type: string
+                n:
+                    type: string
+                e:
+                    type: string
+        JWKS:
+            type: object
+            required:
+                - keys
+            properties:
+                keys:
+                    type: array
+                    items:
+                        $ref: "#/components/schemas/JWK"
+        JWK:
+            oneOf:
+                - $ref: "#/components/schemas/JWKOkp"
+                - $ref: "#/components/schemas/JWKEc"
+                - $ref: "#/components/schemas/JWKRsa"
+            discriminator:
+                propertyName: kty
+                mapping:
+                    OKP: "#/components/schemas/JWKOkp"
+                    EC: "#/components/schemas/JWKEc"
+                    RSA: "#/components/schemas/JWKRsa"
         Problem:
             type: object
             required:
@@ -181,48 +481,175 @@ components:
                 message: Must be a valid email address.
                 code: invalid_format
                 hint: "Enter user@example.com"
+        OAuthServerMetadata:
+            type: object
+            required:
+                - issuer
+                - authorization_endpoint
+                - token_endpoint
+                - jwks_uri
+                - response_types_supported
+                - grant_types_supported
+                - registration_endpoint
+                - code_challenge_methods_supported
+            additionalProperties: false
+            properties:
+                issuer:
+                    type: string
+                    format: uri
+                    description: The authorization server's issuer identifier (RFC 8414 §2).
+                    example: https://mithras.example.com
+                authorization_endpoint:
+                    type: string
+                    format: uri
+                    description: URL of the authorization endpoint.
+                    example: https://mithras.example.com/authorize
+                token_endpoint:
+                    type: string
+                    format: uri
+                    description: URL of the token endpoint.
+                    example: https://mithras.example.com/token
+                jwks_uri:
+                    type: string
+                    format: uri
+                    description: URL of the JWKS endpoint.
+                    example: https://mithras.example.com/.well-known/jwks.json
+                registration_endpoint:
+                    type: string
+                    format: uri
+                    description: URL of the registration endpoint.
+                    example: https://mithras.example.com/register
+                response_types_supported:
+                    type: array
+                    items:
+                        type: string
+                    description: List of supported response types.
+                    example: ["code"]
+                grant_types_supported:
+                    type: array
+                    items:
+                        type: string
+                    description: List of supported grant types.
+                    example: ["authorization_code", "refresh_token"]
+                code_challenge_methods_supported:
+                    type: array
+                    items:
+                        type: string
+                    description: List of supported code challenge methods.
+                    example: ["S256"]
+        TokenRequest:
+            type: object
+            required:
+                - grant_type
+            properties:
+                grant_type:
+                    type: string
+                    enum:
+                        - authorization_code
+                        - refresh_token
+                client_id:
+                    type: string
+                redirect_uri:
+                    type: string
+                    format: uri
+                code:
+                    type: string
+                code_verifier:
+                    type: string
+                refresh_token:
+                    type: string
+        TokenResponse:
+            type: object
+            required:
+                - access_token
+                - refresh_token
+                - expires_in
+                - token_type
+            properties:
+                access_token:
+                    type: string
+                refresh_token:
+                    type: string
+                expires_in:
+                    type: integer
+                token_type:
+                    type: string
+                    enum:
+                        - Bearer
+        RegisterRequest:
+            type: object
+            required:
+                - name
+                - email
+                - password
+            additionalProperties: false
+            properties:
+                name:
+                    description: The user's preferred name.
+                    type: string
+                    minLength: 1
+                    maxLength: 255
+                    example: Alice
+                email:
+                    description: The user's email address.
+                    type: string
+                    format: email
+                    example: alice@mithras.com
+                password:
+                    description: |
+                        The user's chosen password. Must be at least 8 characters long and contain
+                        at least one uppercase letter, one lowercase letter, one digit, and one special character.
+                    type: string
+                    format: password
+                    minLength: 8
+                    maxLength: 256
+        LoginRequest:
+            type: object
+            required:
+                - email
+                - password
+            additionalProperties: false
+            properties:
+                email:
+                    description: The user's email address.
+                    type: string
+                    format: email
+                    example: alice@mithras.com
+                password:
+                    description: |
+                        The user's chosen password. Must be at least 8 characters long and contain
+                        at least one uppercase letter, one lowercase letter, one digit, and one special character.
+                    type: string
+                    format: password
+                    minLength: 8
+                    maxLength: 256
+        ForgotPasswordRequest:
+            type: object
+            required:
+                - email
+            additionalProperties: false
+            properties:
+                email:
+                    type: string
+                    format: email
+                    example: user@example.com
+        ResetPasswordRequest:
+            type: object
+            required:
+                - token
+                - password
+            additionalProperties: false
+            properties:
+                token:
+                    type: string
+                    description: The password reset token received via email.
+                    example: "rst_1234567890abcdef"
+                password:
+                    type: string
+                    format: password
+                    description: The new password for the account.
+                    example: "new-secure-password-123"
     responses:
-        BadRequestError:
-            description: Bad Request
-            headers:
-                X-Request-Id:
-                    $ref: "#/components/headers/X-Request-Id"
-            content:
-                application/problem+json:
-                    schema:
-                        allOf:
-                            - $ref: "#/components/schemas/Problem"
-                            - type: object
-                              required:
-                                - errors
-                              properties:
-                                errors:
-                                    description: |
-                                        Field-level validation errors. Each entry identifies the
-                                        invalid field and explains the failure.
-
-                                        **Security note:** This array is only returned for structural
-                                        validation failures (malformed JSON, missing required fields,
-                                        type mismatches). It is never returned for authentication
-                                        failures — auth errors always use the base `problem` type
-                                        with a single generic message to prevent user enumeration.
-                                    type: array
-                                    minItems: 1
-                                    items:
-                                        $ref: "#/components/schemas/FieldError"
-                              additionalProperties: false
-                    example:
-                        type: https://api.mithras.com/problems/validation-failed
-                        title: Validation Failed
-                        status: 400
-                        detail: 2 field(s) failed validation.
-                        instance: /v1/echo
-                        request_id: req_d6q5bg6mmrj6s3linfvg
-                        errors:
-                            - path: body.message
-                              message: Must be at least 1 character.
-                              code: too_short
-                              hint: Provide a non-empty message string.
         RateLimitError:
             description: Too Many Requests
             headers:
@@ -288,6 +715,79 @@ components:
                         instance: /v1/users/123
                         request_id: req_d6q5bg6mmrj6s3linfvg
                         code: unexpected_error
+        BadRequestError:
+            description: Bad Request
+            headers:
+                X-Request-Id:
+                    $ref: "#/components/headers/X-Request-Id"
+            content:
+                application/problem+json:
+                    schema:
+                        allOf:
+                            - $ref: "#/components/schemas/Problem"
+                            - type: object
+                              required:
+                                - errors
+                              properties:
+                                errors:
+                                    description: |
+                                        Field-level validation errors. Each entry identifies the
+                                        invalid field and explains the failure.
+
+                                        **Security note:** This array is only returned for structural
+                                        validation failures (malformed JSON, missing required fields,
+                                        type mismatches). It is never returned for authentication
+                                        failures — auth errors always use the base `problem` type
+                                        with a single generic message to prevent user enumeration.
+                                    type: array
+                                    minItems: 1
+                                    items:
+                                        $ref: "#/components/schemas/FieldError"
+                              additionalProperties: false
+                    example:
+                        type: https://api.mithras.com/problems/validation-failed
+                        title: Validation Failed
+                        status: 400
+                        detail: 2 field(s) failed validation.
+                        instance: /v1/echo
+                        request_id: req_d6q5bg6mmrj6s3linfvg
+                        errors:
+                            - path: body.message
+                              message: Must be at least 1 character.
+                              code: too_short
+                              hint: Provide a non-empty message string.
+        UnauthorizedError:
+            description: Unauthorized
+            headers:
+                X-Request-Id:
+                    $ref: "#/components/headers/X-Request-Id"
+            content:
+                application/problem+json:
+                    schema:
+                        $ref: "#/components/schemas/Problem"
+                    example:
+                        type: https://api.mithras.com/problems/unauthorized
+                        title: Unauthorized
+                        status: 401
+                        detail: Invalid credentials.
+                        instance: /v1/auth/login
+                        request_id: req_d6q5bg6mmrj6s3linfvg
+        ForbiddenError:
+            description: Forbidden
+            headers:
+                X-Request-Id:
+                    $ref: "#/components/headers/X-Request-Id"
+            content:
+                application/problem+json:
+                    schema:
+                        $ref: "#/components/schemas/Problem"
+                    example:
+                        type: https://api.mithras.com/problems/forbidden
+                        title: Forbidden
+                        status: 403
+                        detail: Access denied.
+                        instance: /v1/auth/login
+                        request_id: req_d6q5bg6mmrj6s3linfvg
     headers:
         X-Request-Id:
             description: |

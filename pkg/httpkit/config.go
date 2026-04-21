@@ -26,12 +26,14 @@ func DefaultConfig() Config {
 
 // Flags returns the flag set for the HTTP server configuration.
 func Flags() *pflag.FlagSet {
-	f := pflag.NewFlagSet("server", pflag.ExitOnError)
+	fs := pflag.NewFlagSet("server", pflag.ExitOnError)
 
 	cfg := DefaultConfig()
-	f.Int64("server.max_request_body_size", cfg.MaxRequestBodySize, "Maximum request body size in bytes")
-	f.Duration("server.read_timeout", cfg.ReadTimeout, "Read timeout for HTTP requests")
-	f.Duration("server.write_timeout", cfg.WriteTimeout, "Write timeout for HTTP requests")
-	f.Duration("server.request_timeout", cfg.RequestTimeout, "Request timeout for HTTP requests")
-	return f
+	fs.Int64("server.max_request_body_size", cfg.MaxRequestBodySize,
+		"Maximum request body size in bytes")
+	fs.Duration("server.read_timeout", cfg.ReadTimeout, "Read timeout for HTTP requests")
+	fs.Duration("server.write_timeout", cfg.WriteTimeout, "Write timeout for HTTP requests")
+	fs.Duration("server.request_timeout", cfg.RequestTimeout, "Request timeout for HTTP requests")
+
+	return fs
 }

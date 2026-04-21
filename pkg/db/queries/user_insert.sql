@@ -1,4 +1,4 @@
--- name: InsertUser :exec
+-- name: InsertUser :one
 INSERT INTO "user" (
   id,
   name,
@@ -7,4 +7,5 @@ INSERT INTO "user" (
   @id,
   @name,
   @email
-);
+)
+RETURNING pk;

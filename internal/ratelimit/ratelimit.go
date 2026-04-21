@@ -5,7 +5,12 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/rizesql/mithras/pkg/logger"
+	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/codes"
+	"go.opentelemetry.io/otel/trace"
+
+	"github.com/rizesql/mithras/pkg/telemetry"
+	"github.com/rizesql/mithras/pkg/telemetry/logger"
 )
 
 type Store interface {
@@ -64,4 +69,51 @@ type Response struct {
 
 	// Tokens currently consumed (derived)
 	Used int64
+}
+
+type telemetryStore struct {
+	inner Store
+	name  string
+}
+
+func (s *telemetryStore) Check(ctx context.Context, req *Request) (res *Response, err error) {
+	ctx, span := telemetry.Start(ctx, "ratelimit.check", trace.WithAttributes(
+		attribute.String("ratelimit.policy", s.name),
+		attribute.String("ratelimit.identifier", req.Identifier),
+		attribute.Int64("ratelimit.limit", req.Limit),
+		attribute.String("ratelimit.duration", req.Duration.String()),
+	))
+	defer telemetry.End(span, &err)
+
+	res, err = s.inner.Check(ctx, req)
+	if err != nil {
+		return nil, err
+	}
+
+	span.SetAttributes(
+		attribute.Bool("ratelimit.success", res.Success),
+		attribute.Int64("ratelimit.remaining", res.Remaining),
+	)
+
+	if !res.Success {
+		span.SetStatus(codes.Error, "rate limit exceeded")
+		if !res.Reset.IsZero() {
+			span.SetAttributes(attribute.String("ratelimit.reset", res.Reset.Format(time.RFC3339)))
+		}
+	}
+
+	return res, err
+}
+
+func (s *telemetryStore) Reset(ctx context.Context, key string) (err error) {
+	ctx, span := telemetry.Start(ctx, "ratelimit.reset")
+	defer telemetry.End(span, &err)
+
+	span.SetAttributes(attribute.String("ratelimit.key", key))
+
+	return s.inner.Reset(ctx, key)
+}
+
+func WithTelemetry(store Store, name string) Store {
+	return &telemetryStore{inner: store, name: name}
 }

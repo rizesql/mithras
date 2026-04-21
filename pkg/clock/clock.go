@@ -22,8 +22,8 @@ var System Clock = &SystemClock{}
 
 // TestClock is a fake clock for deterministic testing.
 type TestClock struct {
-	mu  sync.RWMutex
 	now time.Time
+	mu  sync.RWMutex
 }
 
 // NewTestClock creates a TestClock initialized to the given time.
@@ -32,6 +32,7 @@ func NewTestClock(now time.Time) *TestClock {
 	if now.IsZero() {
 		now = time.Now()
 	}
+
 	return &TestClock{mu: sync.RWMutex{}, now: now}
 }
 
@@ -41,6 +42,7 @@ var _ Clock = (*TestClock)(nil)
 func (c *TestClock) Now() time.Time {
 	c.mu.RLock()
 	defer c.mu.RUnlock()
+
 	return c.now
 }
 
@@ -48,6 +50,7 @@ func (c *TestClock) Now() time.Time {
 func (c *TestClock) Tick(d time.Duration) time.Time {
 	c.mu.Lock()
 	defer c.mu.Unlock()
+
 	c.now = c.now.Add(d)
 
 	return c.now
@@ -57,6 +60,7 @@ func (c *TestClock) Tick(d time.Duration) time.Time {
 func (c *TestClock) Set(t time.Time) time.Time {
 	c.mu.Lock()
 	defer c.mu.Unlock()
+
 	c.now = t
 
 	return c.now

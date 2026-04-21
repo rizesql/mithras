@@ -5,11 +5,226 @@ package api
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"time"
 
+	"github.com/oapi-codegen/runtime"
 	openapi_types "github.com/oapi-codegen/runtime/types"
 )
+
+// Defines values for JWKEcAlg.
+const (
+	ES256 JWKEcAlg = "ES256"
+	ES384 JWKEcAlg = "ES384"
+	ES512 JWKEcAlg = "ES512"
+)
+
+// Valid indicates whether the value is a known member of the JWKEcAlg enum.
+func (e JWKEcAlg) Valid() bool {
+	switch e {
+	case ES256:
+		return true
+	case ES384:
+		return true
+	case ES512:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for JWKEcCrv.
+const (
+	P256 JWKEcCrv = "P-256"
+	P384 JWKEcCrv = "P-384"
+	P521 JWKEcCrv = "P-521"
+)
+
+// Valid indicates whether the value is a known member of the JWKEcCrv enum.
+func (e JWKEcCrv) Valid() bool {
+	switch e {
+	case P256:
+		return true
+	case P384:
+		return true
+	case P521:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for JWKEcKty.
+const (
+	EC JWKEcKty = "EC"
+)
+
+// Valid indicates whether the value is a known member of the JWKEcKty enum.
+func (e JWKEcKty) Valid() bool {
+	switch e {
+	case EC:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for JWKOkpAlg.
+const (
+	EdDSA JWKOkpAlg = "EdDSA"
+)
+
+// Valid indicates whether the value is a known member of the JWKOkpAlg enum.
+func (e JWKOkpAlg) Valid() bool {
+	switch e {
+	case EdDSA:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for JWKOkpCrv.
+const (
+	Ed25519 JWKOkpCrv = "Ed25519"
+	Ed448   JWKOkpCrv = "Ed448"
+)
+
+// Valid indicates whether the value is a known member of the JWKOkpCrv enum.
+func (e JWKOkpCrv) Valid() bool {
+	switch e {
+	case Ed25519:
+		return true
+	case Ed448:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for JWKOkpKty.
+const (
+	OKP JWKOkpKty = "OKP"
+)
+
+// Valid indicates whether the value is a known member of the JWKOkpKty enum.
+func (e JWKOkpKty) Valid() bool {
+	switch e {
+	case OKP:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for JWKRsaAlg.
+const (
+	PS256 JWKRsaAlg = "PS256"
+	PS384 JWKRsaAlg = "PS384"
+	PS512 JWKRsaAlg = "PS512"
+	RS256 JWKRsaAlg = "RS256"
+	RS384 JWKRsaAlg = "RS384"
+	RS512 JWKRsaAlg = "RS512"
+)
+
+// Valid indicates whether the value is a known member of the JWKRsaAlg enum.
+func (e JWKRsaAlg) Valid() bool {
+	switch e {
+	case PS256:
+		return true
+	case PS384:
+		return true
+	case PS512:
+		return true
+	case RS256:
+		return true
+	case RS384:
+		return true
+	case RS512:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for JWKRsaKty.
+const (
+	RSA JWKRsaKty = "RSA"
+)
+
+// Valid indicates whether the value is a known member of the JWKRsaKty enum.
+func (e JWKRsaKty) Valid() bool {
+	switch e {
+	case RSA:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for TokenRequestGrantType.
+const (
+	AuthorizationCode TokenRequestGrantType = "authorization_code"
+	RefreshToken      TokenRequestGrantType = "refresh_token"
+)
+
+// Valid indicates whether the value is a known member of the TokenRequestGrantType enum.
+func (e TokenRequestGrantType) Valid() bool {
+	switch e {
+	case AuthorizationCode:
+		return true
+	case RefreshToken:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for TokenResponseTokenType.
+const (
+	Bearer TokenResponseTokenType = "Bearer"
+)
+
+// Valid indicates whether the value is a known member of the TokenResponseTokenType enum.
+func (e TokenResponseTokenType) Valid() bool {
+	switch e {
+	case Bearer:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for AuthorizeParamsResponseType.
+const (
+	Code AuthorizeParamsResponseType = "code"
+)
+
+// Valid indicates whether the value is a known member of the AuthorizeParamsResponseType enum.
+func (e AuthorizeParamsResponseType) Valid() bool {
+	switch e {
+	case Code:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for AuthorizeParamsCodeChallengeMethod.
+const (
+	S256 AuthorizeParamsCodeChallengeMethod = "S256"
+)
+
+// Valid indicates whether the value is a known member of the AuthorizeParamsCodeChallengeMethod enum.
+func (e AuthorizeParamsCodeChallengeMethod) Valid() bool {
+	switch e {
+	case S256:
+		return true
+	default:
+		return false
+	}
+}
 
 // FieldError A single field-level validation error.
 //
@@ -32,6 +247,110 @@ type FieldError struct {
 	// Path JSON path to the invalid field, prefixed with its location.
 	// Examples: `body.email`, `query.page`, `header.authorization`.
 	Path string `json:"path"`
+}
+
+// ForgotPasswordRequest defines model for ForgotPasswordRequest.
+type ForgotPasswordRequest struct {
+	Email openapi_types.Email `json:"email"`
+}
+
+// JWK defines model for JWK.
+type JWK struct {
+	union json.RawMessage
+}
+
+// JWKEc defines model for JWKEc.
+type JWKEc struct {
+	Alg JWKEcAlg `json:"alg"`
+	Crv JWKEcCrv `json:"crv"`
+	Kid string   `json:"kid"`
+	Kty JWKEcKty `json:"kty"`
+	X   string   `json:"x"`
+	Y   string   `json:"y"`
+}
+
+// JWKEcAlg defines model for JWKEc.Alg.
+type JWKEcAlg string
+
+// JWKEcCrv defines model for JWKEc.Crv.
+type JWKEcCrv string
+
+// JWKEcKty defines model for JWKEc.Kty.
+type JWKEcKty string
+
+// JWKOkp defines model for JWKOkp.
+type JWKOkp struct {
+	Alg JWKOkpAlg `json:"alg"`
+	Crv JWKOkpCrv `json:"crv"`
+	Kid string    `json:"kid"`
+	Kty JWKOkpKty `json:"kty"`
+	X   string    `json:"x"`
+}
+
+// JWKOkpAlg defines model for JWKOkp.Alg.
+type JWKOkpAlg string
+
+// JWKOkpCrv defines model for JWKOkp.Crv.
+type JWKOkpCrv string
+
+// JWKOkpKty defines model for JWKOkp.Kty.
+type JWKOkpKty string
+
+// JWKRsa defines model for JWKRsa.
+type JWKRsa struct {
+	Alg JWKRsaAlg `json:"alg"`
+	E   string    `json:"e"`
+	Kid string    `json:"kid"`
+	Kty JWKRsaKty `json:"kty"`
+	N   string    `json:"n"`
+}
+
+// JWKRsaAlg defines model for JWKRsa.Alg.
+type JWKRsaAlg string
+
+// JWKRsaKty defines model for JWKRsa.Kty.
+type JWKRsaKty string
+
+// JWKS defines model for JWKS.
+type JWKS struct {
+	Keys []JWK `json:"keys"`
+}
+
+// LoginRequest defines model for LoginRequest.
+type LoginRequest struct {
+	// Email The user's email address.
+	Email openapi_types.Email `json:"email"`
+
+	// Password The user's chosen password. Must be at least 8 characters long and contain
+	// at least one uppercase letter, one lowercase letter, one digit, and one special character.
+	Password string `json:"password"`
+}
+
+// OAuthServerMetadata defines model for OAuthServerMetadata.
+type OAuthServerMetadata struct {
+	// AuthorizationEndpoint URL of the authorization endpoint.
+	AuthorizationEndpoint string `json:"authorization_endpoint"`
+
+	// CodeChallengeMethodsSupported List of supported code challenge methods.
+	CodeChallengeMethodsSupported []string `json:"code_challenge_methods_supported"`
+
+	// GrantTypesSupported List of supported grant types.
+	GrantTypesSupported []string `json:"grant_types_supported"`
+
+	// Issuer The authorization server's issuer identifier (RFC 8414 §2).
+	Issuer string `json:"issuer"`
+
+	// JwksUri URL of the JWKS endpoint.
+	JwksUri string `json:"jwks_uri"`
+
+	// RegistrationEndpoint URL of the registration endpoint.
+	RegistrationEndpoint string `json:"registration_endpoint"`
+
+	// ResponseTypesSupported List of supported response types.
+	ResponseTypesSupported []string `json:"response_types_supported"`
+
+	// TokenEndpoint URL of the token endpoint.
+	TokenEndpoint string `json:"token_endpoint"`
 }
 
 // Problem RFC 7807 Problem Details for HTTP APIs.
@@ -67,8 +386,8 @@ type Problem struct {
 	AdditionalProperties map[string]interface{} `json:"-"`
 }
 
-// V2RegisterRequest defines model for V2RegisterRequest.
-type V2RegisterRequest struct {
+// RegisterRequest defines model for RegisterRequest.
+type RegisterRequest struct {
 	// Email The user's email address.
 	Email openapi_types.Email `json:"email"`
 
@@ -80,11 +399,38 @@ type V2RegisterRequest struct {
 	Password string `json:"password"`
 }
 
-// V2RegisterResponse defines model for V2RegisterResponse.
-type V2RegisterResponse struct {
-	// Id The unique identifier for the created user.
-	Id string `json:"id"`
+// ResetPasswordRequest defines model for ResetPasswordRequest.
+type ResetPasswordRequest struct {
+	// Password The new password for the account.
+	Password string `json:"password"`
+
+	// Token The password reset token received via email.
+	Token string `json:"token"`
 }
+
+// TokenRequest defines model for TokenRequest.
+type TokenRequest struct {
+	ClientId     *string               `json:"client_id,omitempty"`
+	Code         *string               `json:"code,omitempty"`
+	CodeVerifier *string               `json:"code_verifier,omitempty"`
+	GrantType    TokenRequestGrantType `json:"grant_type"`
+	RedirectUri  *string               `json:"redirect_uri,omitempty"`
+	RefreshToken *string               `json:"refresh_token,omitempty"`
+}
+
+// TokenRequestGrantType defines model for TokenRequest.GrantType.
+type TokenRequestGrantType string
+
+// TokenResponse defines model for TokenResponse.
+type TokenResponse struct {
+	AccessToken  string                 `json:"access_token"`
+	ExpiresIn    int                    `json:"expires_in"`
+	RefreshToken string                 `json:"refresh_token"`
+	TokenType    TokenResponseTokenType `json:"token_type"`
+}
+
+// TokenResponseTokenType defines model for TokenResponse.TokenType.
+type TokenResponseTokenType string
 
 // BadRequestError defines model for BadRequestError.
 type BadRequestError struct {
@@ -119,6 +465,17 @@ type BadRequestError struct {
 	// Type URI reference identifying the problem type. Dereference for human-readable documentation.
 	Type string `json:"type"`
 }
+
+// ForbiddenError RFC 7807 Problem Details for HTTP APIs.
+//
+// Provides machine-readable error details in HTTP responses. The `request_id`
+// field is an extension to the base RFC 7807 format — it is always present
+// and matches the `X-Request-Id` response header, making the error body
+// fully self-contained for debugging without requiring access to response
+// headers.
+//
+// See https://tools.ietf.org/html/rfc7807.
+type ForbiddenError = Problem
 
 // InternalServerError defines model for InternalServerError.
 type InternalServerError struct {
@@ -176,8 +533,47 @@ type RateLimitError struct {
 	Type string `json:"type"`
 }
 
-// V2RegisterJSONRequestBody defines body for V2Register for application/json ContentType.
-type V2RegisterJSONRequestBody = V2RegisterRequest
+// UnauthorizedError RFC 7807 Problem Details for HTTP APIs.
+//
+// Provides machine-readable error details in HTTP responses. The `request_id`
+// field is an extension to the base RFC 7807 format — it is always present
+// and matches the `X-Request-Id` response header, making the error body
+// fully self-contained for debugging without requiring access to response
+// headers.
+//
+// See https://tools.ietf.org/html/rfc7807.
+type UnauthorizedError = Problem
+
+// AuthorizeParams defines parameters for Authorize.
+type AuthorizeParams struct {
+	ResponseType        AuthorizeParamsResponseType        `form:"response_type" json:"response_type"`
+	ClientId            string                             `form:"client_id" json:"client_id"`
+	RedirectUri         string                             `form:"redirect_uri" json:"redirect_uri"`
+	State               *string                            `form:"state,omitempty" json:"state,omitempty"`
+	CodeChallenge       string                             `form:"code_challenge" json:"code_challenge"`
+	CodeChallengeMethod AuthorizeParamsCodeChallengeMethod `form:"code_challenge_method" json:"code_challenge_method"`
+}
+
+// AuthorizeParamsResponseType defines parameters for Authorize.
+type AuthorizeParamsResponseType string
+
+// AuthorizeParamsCodeChallengeMethod defines parameters for Authorize.
+type AuthorizeParamsCodeChallengeMethod string
+
+// ForgotPasswordJSONRequestBody defines body for ForgotPassword for application/json ContentType.
+type ForgotPasswordJSONRequestBody = ForgotPasswordRequest
+
+// LoginJSONRequestBody defines body for Login for application/json ContentType.
+type LoginJSONRequestBody = LoginRequest
+
+// RegisterJSONRequestBody defines body for Register for application/json ContentType.
+type RegisterJSONRequestBody = RegisterRequest
+
+// ResetPasswordJSONRequestBody defines body for ResetPassword for application/json ContentType.
+type ResetPasswordJSONRequestBody = ResetPasswordRequest
+
+// TokenFormdataRequestBody defines body for Token for application/x-www-form-urlencoded ContentType.
+type TokenFormdataRequestBody = TokenRequest
 
 // Getter for additional properties for Problem. Returns the specified
 // element and whether it was found
@@ -312,4 +708,123 @@ func (a Problem) MarshalJSON() ([]byte, error) {
 		}
 	}
 	return json.Marshal(object)
+}
+
+// AsJWKOkp returns the union data inside the JWK as a JWKOkp
+func (t JWK) AsJWKOkp() (JWKOkp, error) {
+	var body JWKOkp
+	err := json.Unmarshal(t.union, &body)
+	return body, err
+}
+
+// FromJWKOkp overwrites any union data inside the JWK as the provided JWKOkp
+func (t *JWK) FromJWKOkp(v JWKOkp) error {
+	v.Kty = "OKP"
+	b, err := json.Marshal(v)
+	t.union = b
+	return err
+}
+
+// MergeJWKOkp performs a merge with any union data inside the JWK, using the provided JWKOkp
+func (t *JWK) MergeJWKOkp(v JWKOkp) error {
+	v.Kty = "OKP"
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+
+	merged, err := runtime.JSONMerge(t.union, b)
+	t.union = merged
+	return err
+}
+
+// AsJWKEc returns the union data inside the JWK as a JWKEc
+func (t JWK) AsJWKEc() (JWKEc, error) {
+	var body JWKEc
+	err := json.Unmarshal(t.union, &body)
+	return body, err
+}
+
+// FromJWKEc overwrites any union data inside the JWK as the provided JWKEc
+func (t *JWK) FromJWKEc(v JWKEc) error {
+	v.Kty = "EC"
+	b, err := json.Marshal(v)
+	t.union = b
+	return err
+}
+
+// MergeJWKEc performs a merge with any union data inside the JWK, using the provided JWKEc
+func (t *JWK) MergeJWKEc(v JWKEc) error {
+	v.Kty = "EC"
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+
+	merged, err := runtime.JSONMerge(t.union, b)
+	t.union = merged
+	return err
+}
+
+// AsJWKRsa returns the union data inside the JWK as a JWKRsa
+func (t JWK) AsJWKRsa() (JWKRsa, error) {
+	var body JWKRsa
+	err := json.Unmarshal(t.union, &body)
+	return body, err
+}
+
+// FromJWKRsa overwrites any union data inside the JWK as the provided JWKRsa
+func (t *JWK) FromJWKRsa(v JWKRsa) error {
+	v.Kty = "RSA"
+	b, err := json.Marshal(v)
+	t.union = b
+	return err
+}
+
+// MergeJWKRsa performs a merge with any union data inside the JWK, using the provided JWKRsa
+func (t *JWK) MergeJWKRsa(v JWKRsa) error {
+	v.Kty = "RSA"
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+
+	merged, err := runtime.JSONMerge(t.union, b)
+	t.union = merged
+	return err
+}
+
+func (t JWK) Discriminator() (string, error) {
+	var discriminator struct {
+		Discriminator string `json:"kty"`
+	}
+	err := json.Unmarshal(t.union, &discriminator)
+	return discriminator.Discriminator, err
+}
+
+func (t JWK) ValueByDiscriminator() (interface{}, error) {
+	discriminator, err := t.Discriminator()
+	if err != nil {
+		return nil, err
+	}
+	switch discriminator {
+	case "EC":
+		return t.AsJWKEc()
+	case "OKP":
+		return t.AsJWKOkp()
+	case "RSA":
+		return t.AsJWKRsa()
+	default:
+		return nil, errors.New("unknown discriminator value: " + discriminator)
+	}
+}
+
+func (t JWK) MarshalJSON() ([]byte, error) {
+	b, err := t.union.MarshalJSON()
+	return b, err
+}
+
+func (t *JWK) UnmarshalJSON(b []byte) error {
+	err := t.union.UnmarshalJSON(b)
+	return err
 }

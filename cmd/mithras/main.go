@@ -4,6 +4,7 @@ package main
 import (
 	"context"
 	"fmt"
+	"log/slog"
 	"strings"
 
 	"github.com/rizesql/mithras/cmd/mithras/datastore"
@@ -15,8 +16,6 @@ import (
 )
 
 func main() {
-	out := cli.Default()
-
 	var cfgFile string
 
 	rootCmd := &cobra.Command{
@@ -39,7 +38,7 @@ func main() {
 				}
 			}
 
-			out.Configure()
+			cli.Configure(true, slog.LevelInfo)
 
 			return nil
 		},
@@ -51,11 +50,11 @@ func main() {
 		"config file (default is `./mithras.yaml`)",
 	)
 
-	rootCmd.PersistentFlags().AddFlagSet(out.Flags())
+	rootCmd.PersistentFlags().AddFlagSet(cli.Default().Flags())
 
 	help := rootCmd.HelpFunc()
 	rootCmd.SetHelpFunc(func(cmd *cobra.Command, args []string) {
-		out.PrintBanner()
+		cli.PrintBanner()
 		help(cmd, args)
 	})
 
@@ -63,6 +62,6 @@ func main() {
 	rootCmd.AddCommand(serve.Command())
 
 	if err := rootCmd.ExecuteContext(context.Background()); err != nil {
-		out.Fatal("%v", err)
+		cli.Fatal("%v", err)
 	}
 }

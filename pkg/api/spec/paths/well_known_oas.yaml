@@ -1,0 +1,91 @@
+paths:
+  get:
+    tags:
+      - well-known
+    security: []
+    operationId: oauthServerMetadata
+    summary: OAuth 2.0 Authorization Server Metadata
+    description: |
+      RFC 8414 Authorization Server Metadata. Clients fetch this endpoint once
+      to discover the token endpoint, JWKS URI, and supported capabilities.
+
+    responses:
+      "200":
+        description: Authorization server metadata.
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/OAuthServerMetadata"
+
+      "429":
+        $ref: "../lib/errors.yaml#/RateLimitError"
+
+      "500":
+        $ref: "../lib/errors.yaml#/InternalServerError"
+
+components:
+  schemas:
+    OAuthServerMetadata:
+      type: object
+      required:
+        - issuer
+        - authorization_endpoint
+        - token_endpoint
+        - jwks_uri
+        - response_types_supported
+        - grant_types_supported
+        - registration_endpoint
+        - code_challenge_methods_supported
+      additionalProperties: false
+
+      properties:
+        issuer:
+          type: string
+          format: uri
+          description: The authorization server's issuer identifier (RFC 8414 §2).
+          example: https://mithras.example.com
+
+        authorization_endpoint:
+          type: string
+          format: uri
+          description: URL of the authorization endpoint.
+          example: https://mithras.example.com/authorize
+
+        token_endpoint:
+          type: string
+          format: uri
+          description: URL of the token endpoint.
+          example: https://mithras.example.com/token
+
+        jwks_uri:
+          type: string
+          format: uri
+          description: URL of the JWKS endpoint.
+          example: https://mithras.example.com/.well-known/jwks.json
+
+        registration_endpoint:
+          type: string
+          format: uri
+          description: URL of the registration endpoint.
+          example: https://mithras.example.com/register
+
+        response_types_supported:
+          type: array
+          items:
+            type: string
+          description: List of supported response types.
+          example: ["code"]
+
+        grant_types_supported:
+          type: array
+          items:
+            type: string
+          description: List of supported grant types.
+          example: ["authorization_code", "refresh_token"]
+
+        code_challenge_methods_supported:
+          type: array
+          items:
+            type: string
+          description: List of supported code challenge methods.
+          example: ["S256"]

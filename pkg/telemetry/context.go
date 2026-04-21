@@ -22,5 +22,6 @@ func span(ctx context.Context) trace.Span {
 	if s, ok := ctx.Value(mainSpanKey).(trace.Span); ok {
 		return s
 	}
+
 	return trace.SpanFromContext(ctx)
 }

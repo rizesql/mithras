@@ -11,9 +11,11 @@ import (
 	"github.com/pb33f/libopenapi"
 	oapivalidator "github.com/pb33f/libopenapi-validator"
 	"github.com/pb33f/libopenapi-validator/config"
+	"go.opentelemetry.io/otel/attribute"
 
 	"github.com/rizesql/mithras/internal/errkit"
 	"github.com/rizesql/mithras/pkg/api"
+	"github.com/rizesql/mithras/pkg/telemetry"
 )
 
 // ValidationErrors is a slice of api.FieldError that implements the error interface.
@@ -35,7 +37,7 @@ func New() (*Validator, error) {
 		return nil, errkit.Wrap(err, errkit.Internal("failed to create OpenAPI document"))
 	}
 
-	v, errors := oapivalidator.NewValidator(document, config.WithRegexCache(&sync.Map{}))
+	val, errors := oapivalidator.NewValidator(document, config.WithRegexCache(&sync.Map{}))
 	if len(errors) > 0 {
 		messages := make([]errkit.Option, len(errors))
 		for i, e := range errors {
@@ -45,30 +47,39 @@ func New() (*Validator, error) {
 		return nil, errkit.New("failed to create validator", messages...)
 	}
 
-	if valid, docErrors := v.ValidateDocument(); !valid {
+	if valid, docErrors := val.ValidateDocument(); !valid {
 		messages := make([]errkit.Option, len(docErrors))
 		for i, e := range docErrors {
 			messages[i] = errkit.Internal(e.Message)
 		}
+
 		return nil, errkit.New("openapi document is invalid", messages...)
 	}
 
-	return &Validator{validator: v}, nil
+	return &Validator{validator: val}, nil
 }
 
 // Validate checks the request and returns an errkit error if validation fails.
 // If valid, it returns nil.
-func (v *Validator) Validate(ctx context.Context, r *http.Request) error {
+func (v *Validator) Validate(ctx context.Context, req *http.Request) (err error) {
+	ctx, span := telemetry.Start(ctx, "validator.Validate")
+	defer telemetry.End(span, &err)
+
 	select {
 	case <-ctx.Done():
 		return ctx.Err()
 	default:
 	}
 
-	valid, validationErrs := v.validator.ValidateHttpRequest(r)
+	valid, validationErrs := v.validator.ValidateHttpRequest(req)
+
+	telemetry.Attr(ctx, attribute.Bool("validator.valid", valid))
+
 	if valid {
 		return nil
 	}
+
+	telemetry.Attr(ctx, attribute.Int("validator.error_count", len(validationErrs)))
 
 	publicMsgs := make([]string, 0, len(validationErrs))
 	fieldErrs := make(ValidationErrors, 0, len(validationErrs))
@@ -104,7 +115,7 @@ func (v *Validator) Validate(ctx context.Context, r *http.Request) error {
 
 	return errkit.Wrap(
 		fieldErrs,
-		errkit.Code(errkit.App.Validation.Code("openapi_mismatch")),
+		errkit.App.Validation.Code("openapi_mismatch"),
 		errkit.Public("Validation failed: "+strings.Join(publicMsgs, " | ")),
 	)
 }

@@ -1,14 +1,14 @@
 package migrate
 
 import (
+	"errors"
 	"fmt"
 
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 
+	"github.com/rizesql/mithras/internal/datastore"
 	"github.com/rizesql/mithras/pkg/cli"
-	"github.com/rizesql/mithras/pkg/logger"
-	"github.com/rizesql/mithras/services/datastore"
 )
 
 func Command() *cobra.Command {
@@ -21,12 +21,11 @@ func Command() *cobra.Command {
 
 	cmd.Flags().AddFlagSet(datastore.Flags())
 	cmd.SilenceUsage = true
+
 	return cmd
 }
 
 func migrate(cmd *cobra.Command, _ []string) error {
-	out := cli.Default()
-
 	if err := viper.BindPFlags(cmd.Flags()); err != nil {
 		return fmt.Errorf("failed to bind flags: %w", err)
 	}
@@ -36,22 +35,22 @@ func migrate(cmd *cobra.Command, _ []string) error {
 		return fmt.Errorf("failed to load config: %w", err)
 	}
 
-	logger.Configure(cfg.Logs)
-	logger.SetHandler(cli.NewSlogHandler(out))
+	cli.Configure(cfg.Logs.Enabled, cfg.Logs.Level)
 
 	if cfg.DB.URI == "" {
-		return fmt.Errorf("database URI not configured")
+		return errors.New("database URI not configured")
 	}
 
-	out.Header("Running Database Migrations")
-	out.Label("Schema", cfg.DB.SchemaName)
-	out.Label("Migrations Table", cfg.DB.MigrationsTable)
-	out.Raw("")
+	cli.Header("Running Database Migrations")
+	cli.Label("Schema", cfg.DB.SchemaName)
+	cli.Label("Migrations Table", cfg.DB.MigrationsTable)
+	cli.Raw("")
 
 	if err := datastore.Migrate(cmd.Context(), &cfg); err != nil {
 		return err
 	}
 
-	out.Success("Migrations completed successfully")
+	cli.Success("Migrations completed successfully")
+
 	return nil
 }

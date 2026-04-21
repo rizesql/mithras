@@ -1,0 +1,80 @@
+paths:
+  post:
+    tags:
+      - auth
+    security: []
+    operationId: login
+    summary: Login
+    description: |
+      Authenticates a user using their email and password. Returns a short-lived
+      Ed25519-signed Access Token and a long-lived stateful Refresh Token upon success.
+
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/LoginRequest"
+
+    responses:
+      "302":
+        description: Redirects to the client's redirect URI with an authorization code.
+      # "200":
+      #   description: Successful login. Returns access and refresh tokens.
+      #   content:
+      #     application/json:
+      #       schema:
+      #         $ref: "#/components/schemas/LoginResponse"
+      "303":
+        description: Redirect back to login with generic error on failure
+      "400":
+        $ref: "../lib/errors.yaml#/BadRequestError"
+      "401":
+        $ref: "../lib/errors.yaml#/UnauthorizedError"
+      "403":
+        $ref: "../lib/errors.yaml#/ForbiddenError"
+      "429":
+        $ref: "../lib/errors.yaml#/RateLimitError"
+      "500":
+        $ref: "../lib/errors.yaml#/InternalServerError"
+
+components:
+  schemas:
+    LoginRequest:
+      type: object
+      required: [email, password]
+      additionalProperties: false
+
+      properties:
+        email:
+          description: The user's email address.
+          type: string
+          format: email
+          example: alice@mithras.com
+
+        password:
+          description: |
+            The user's chosen password. Must be at least 8 characters long and contain
+            at least one uppercase letter, one lowercase letter, one digit, and one special character.
+          type: string
+          format: password
+          minLength: 8
+          maxLength: 256
+
+    LoginResponse:
+      type: object
+      required:
+        - access_token
+        - refresh_token
+        - expires_in
+      properties:
+        access_token:
+          description: |
+            The JWS access token signed with Ed25519. It is valid for a short duration
+            and should be included in the Authorization header as a Bearer token.
+          type: string
+        refresh_token:
+          description: |
+            A long-lived opaque token used to obtain new access tokens when the current
+            one expires. This token must be kept secure.
+          type: string

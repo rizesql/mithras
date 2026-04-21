@@ -32,6 +32,7 @@ func New(msg string, opts ...Option) error {
 	for _, opt := range opts {
 		opt.apply(e)
 	}
+
 	return e
 }
 
@@ -60,11 +61,13 @@ func GetPublic(err error) string {
 	}
 
 	var msgs []string
+
 	for curr := range walk(err) {
-		if re, ok := curr.(*richError); ok && re.public != "" {
+		if re, ok := errors.AsType[*richError](curr); ok && re.public != "" {
 			msgs = append(msgs, re.public)
 		}
 	}
+
 	return strings.Join(msgs, " ")
 }
 
@@ -75,18 +78,20 @@ func GetInternal(err error) string {
 	}
 
 	var msgs []string
+
 	for curr := range walk(err) {
-		if re, ok := curr.(*richError); ok && re.internal != "" {
+		if re, ok := errors.AsType[*richError](curr); ok && re.internal != "" {
 			msgs = append(msgs, re.internal)
 		}
 	}
+
 	return strings.Join(msgs, ": ")
 }
 
 // GetCode returns the first non-zero error code from the chain.
 func GetCode(err error) Code {
 	for curr := range walk(err) {
-		if re, ok := curr.(*richError); ok && !re.code.IsZero() {
+		if re, ok := errors.AsType[*richError](curr); ok && !re.code.IsZero() {
 			return re.code
 		}
 	}

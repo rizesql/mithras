@@ -1,0 +1,69 @@
+paths:
+  post:
+    tags: [auth]
+    security: []
+    operationId: token
+
+    summary: Token Endpoint
+    description: |
+      Exchanges an authorization code for access and refresh tokens,
+      or rotates a refresh token. Supports OAuth 2.1 authorization_code
+      and refresh_token grants.
+
+    requestBody:
+      required: true
+      content:
+        application/x-www-form-urlencoded:
+          schema:
+            $ref: "#/components/schemas/TokenRequest"
+
+    responses:
+      "200":
+        description: Successful token exchange.
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/TokenResponse"
+      "400":
+        $ref: "../lib/errors.yaml#/BadRequestError"
+      "401":
+        $ref: "../lib/errors.yaml#/UnauthorizedError"
+      "429":
+        $ref: "../lib/errors.yaml#/RateLimitError"
+      "500":
+        $ref: "../lib/errors.yaml#/InternalServerError"
+
+components:
+  schemas:
+    TokenRequest:
+      type: object
+      required: [grant_type]
+      properties:
+        grant_type:
+          type: string
+          enum: [authorization_code, refresh_token]
+        client_id:
+          type: string
+        redirect_uri:
+          type: string
+          format: uri
+        code:
+          type: string
+        code_verifier:
+          type: string
+        refresh_token:
+          type: string
+
+    TokenResponse:
+      type: object
+      required: [access_token, refresh_token, expires_in, token_type]
+      properties:
+        access_token:
+          type: string
+        refresh_token:
+          type: string
+        expires_in:
+          type: integer
+        token_type:
+          type: string
+          enum: [Bearer]

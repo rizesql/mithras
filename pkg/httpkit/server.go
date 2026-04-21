@@ -11,8 +11,12 @@ import (
 	"sync"
 	"time"
 
+	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
+	"go.opentelemetry.io/otel/trace"
+
 	"github.com/rizesql/mithras/pkg/clock"
-	"github.com/rizesql/mithras/pkg/logger"
+	"github.com/rizesql/mithras/pkg/telemetry"
+	"github.com/rizesql/mithras/pkg/telemetry/logger"
 )
 
 // Dependencies holds the dependencies for the HTTP server.
@@ -23,17 +27,16 @@ type Dependencies struct {
 
 // Server holds the state of the HTTP server.
 type Server struct {
+	pool       sync.Pool
+	config     Config
+	clock      clock.Clock
+	errHandler ErrorHandler
+
 	mu          sync.Mutex
 	isListening bool
 
 	mux *http.ServeMux
 	srv *http.Server
-
-	config     Config
-	errHandler ErrorHandler
-	clock      clock.Clock
-
-	pool sync.Pool
 }
 
 // New creates a new Server instance.
@@ -70,12 +73,14 @@ func New(deps Dependencies, cfg Config) *Server {
 }
 
 func (srv *Server) acquire() *Context {
-	c, ok := srv.pool.Get().(*Context)
+	cx, ok := srv.pool.Get().(*Context)
 	if !ok {
 		panic("unable to acquire context from pool")
 	}
-	c.reset()
-	return c
+
+	cx.reset()
+
+	return cx
 }
 
 func (srv *Server) release(c *Context) { srv.pool.Put(c) }
@@ -89,8 +94,10 @@ func (srv *Server) Serve(ctx context.Context, ln net.Listener) error {
 	if srv.isListening {
 		logger.Warn("server.already_listening")
 		srv.mu.Unlock()
+
 		return nil
 	}
+
 	srv.isListening = true
 	srv.mu.Unlock()
 
@@ -123,6 +130,7 @@ func (srv *Server) Serve(ctx context.Context, ln net.Listener) error {
 		logger.Error("server.listen_failed", "error", err)
 		return err
 	}
+
 	return nil
 }
 
@@ -146,36 +154,43 @@ func (srv *Server) RegisterRoute(route Route, middlewares ...Middleware) {
 
 	readBody := methodHasBody(method)
 
-	// Wrap the chain so that error handling runs inside the middleware stack.
-	// This ensures that when middleware defers fire (e.g. to capture status code),
-	// the error handler has already written the actual HTTP status.
 	withErrHandling := func(next HandleFunc) HandleFunc {
 		return func(ctx context.Context, c *Context) error {
 			err := next(ctx, c)
 			if err != nil {
+				err = telemetry.Err(ctx, err)
 				srv.errHandler(c, err)
+			} else {
+				telemetry.Ok(ctx)
 			}
+
 			return nil
 		}
 	}
 	wrapped := withErrHandling(chain)
 
-	srv.mux.HandleFunc(pattern, func(w http.ResponseWriter, r *http.Request) {
-		c := srv.acquire()
+	handler := func(w http.ResponseWriter, r *http.Request) {
+		cx := srv.acquire()
+
 		defer func() {
-			c.reset()
-			srv.release(c)
+			cx.reset()
+			srv.release(cx)
 		}()
 
-		if err := c.Init(w, r, srv.config.MaxRequestBodySize, readBody, srv.clock); err != nil {
+		if err := cx.Init(w, r, srv.config.MaxRequestBodySize, readBody, srv.clock); err != nil {
 			logger.Error("server.init_context_failed", "error", err)
-			srv.errHandler(c, err)
+			srv.errHandler(cx, err)
+
 			return
 		}
 
+		wideCtx := telemetry.InjectMainSpan(r.Context(), trace.SpanFromContext(r.Context()))
+
 		//nolint:errcheck // errors already handled by withErrHandling above
-		_ = wrapped(withContext(r.Context(), c), c)
-	})
+		_ = wrapped(withContext(wideCtx, cx), cx)
+	}
+
+	srv.mux.Handle(pattern, otelhttp.NewHandler(http.HandlerFunc(handler), pattern))
 }
 
 // Shutdown gracefully shuts down the server.

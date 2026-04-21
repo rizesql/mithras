@@ -14,7 +14,7 @@ import (
 	"go.opentelemetry.io/otel/sdk/metric"
 	"google.golang.org/grpc/credentials"
 
-	"github.com/rizesql/mithras/pkg/logger"
+	"github.com/rizesql/mithras/pkg/telemetry/logger"
 )
 
 func ConfigureMetrics(ctx context.Context, cfg *Metrics) (func(context.Context) error, error) {
@@ -35,6 +35,7 @@ func ConfigureMetrics(ctx context.Context, cfg *Metrics) (func(context.Context) 
 		if err != nil {
 			return noopShutdown(), err
 		}
+
 		return newMeter(exp, cfg.Interval), nil
 	default:
 		return noopShutdown(), fmt.Errorf("%s metrics exporter is unsupported", cfg.Exporter)
@@ -66,51 +67,64 @@ func newMeter(exporter metric.Exporter, interval time.Duration) func(context.Con
 	}
 
 	otel.SetMeterProvider(mp)
+
 	return mp.Shutdown
 }
 
 func otlpMetricsExporter(ctx context.Context, cfg *Metrics) (metric.Exporter, error) {
 	switch cfg.Protocol {
 	case ProtocolHTTP:
-		opts := []otlpmetrichttp.Option{
-			otlpmetrichttp.WithCompression(otlpmetrichttp.GzipCompression),
-			otlpmetrichttp.WithEndpoint(cfg.Endpoint),
-		}
-		if len(cfg.Headers) > 0 {
-			opts = append(opts, otlpmetrichttp.WithHeaders(cfg.Headers))
-		}
-		if cfg.URLPath != "" {
-			opts = append(opts, otlpmetrichttp.WithURLPath(cfg.URLPath))
-		}
-		if cfg.Insecure {
-			opts = append(opts, otlpmetrichttp.WithInsecure())
-		}
-
-		exp, err := otlpmetrichttp.New(ctx, opts...)
-		if err != nil {
-			return nil, err
-		}
-		return exp, nil
-
+		return otlpMetricsHTTPExporter(ctx, cfg)
 	case ProtocolGRPC:
-		opts := []otlpmetricgrpc.Option{
-			otlpmetricgrpc.WithEndpoint(cfg.Endpoint),
-		}
-		if len(cfg.Headers) > 0 {
-			opts = append(opts, otlpmetricgrpc.WithHeaders(cfg.Headers))
-		}
-		if cfg.Insecure {
-			opts = append(opts, otlpmetricgrpc.WithInsecure())
-		} else {
-			opts = append(opts, otlpmetricgrpc.WithTLSCredentials(credentials.NewClientTLSFromCert(nil, "")))
-		}
-
-		exp, err := otlpmetricgrpc.New(ctx, opts...)
-		if err != nil {
-			return nil, err
-		}
-		return exp, nil
+		return otlpMetricsGRPCExporter(ctx, cfg)
 	default:
 		return nil, fmt.Errorf("%s protocol is unsupported", cfg.Protocol)
 	}
+}
+
+func otlpMetricsHTTPExporter(ctx context.Context, cfg *Metrics) (metric.Exporter, error) {
+	opts := []otlpmetrichttp.Option{
+		otlpmetrichttp.WithCompression(otlpmetrichttp.GzipCompression),
+		otlpmetrichttp.WithEndpoint(cfg.Endpoint),
+	}
+	if len(cfg.Headers) > 0 {
+		opts = append(opts, otlpmetrichttp.WithHeaders(cfg.Headers))
+	}
+
+	if cfg.URLPath != "" {
+		opts = append(opts, otlpmetrichttp.WithURLPath(cfg.URLPath))
+	}
+
+	if cfg.Insecure {
+		opts = append(opts, otlpmetrichttp.WithInsecure())
+	}
+
+	exp, err := otlpmetrichttp.New(ctx, opts...)
+	if err != nil {
+		return nil, err
+	}
+
+	return exp, nil
+}
+
+func otlpMetricsGRPCExporter(ctx context.Context, cfg *Metrics) (metric.Exporter, error) {
+	opts := []otlpmetricgrpc.Option{
+		otlpmetricgrpc.WithEndpoint(cfg.Endpoint),
+	}
+	if len(cfg.Headers) > 0 {
+		opts = append(opts, otlpmetricgrpc.WithHeaders(cfg.Headers))
+	}
+
+	if cfg.Insecure {
+		opts = append(opts, otlpmetricgrpc.WithInsecure())
+	} else {
+		opts = append(opts, otlpmetricgrpc.WithTLSCredentials(credentials.NewClientTLSFromCert(nil, "")))
+	}
+
+	exp, err := otlpmetricgrpc.New(ctx, opts...)
+	if err != nil {
+		return nil, err
+	}
+
+	return exp, nil
 }

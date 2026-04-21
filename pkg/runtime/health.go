@@ -10,7 +10,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/rizesql/mithras/pkg/logger"
+	"github.com/rizesql/mithras/pkg/telemetry/logger"
 )
 
 const (
@@ -28,8 +28,8 @@ type ReadinessCheck func(ctx context.Context) error
 
 // healthState holds the state of health checks.
 type healthState struct {
-	mu           sync.RWMutex
 	checks       map[string]ReadinessCheck
+	mu           sync.RWMutex
 	checkTimeout time.Duration
 }
 
@@ -47,6 +47,7 @@ func (rt *Runtime) AddReadiness(name string, check ReadinessCheck) {
 	if name == "" {
 		panic("runtime: readiness check name cannot be empty")
 	}
+
 	if check == nil {
 		panic("runtime: readiness check function cannot be nil")
 	}
@@ -80,9 +81,11 @@ func (rt *Runtime) RegisterHealth(mux *http.ServeMux, prefix ...string) {
 // Returns 503 if runtime hasn't started, 200 otherwise.
 func (rt *Runtime) handleLive(w http.ResponseWriter, _ *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
-	if rt.state.Load() == uint32(stateIdle) {
+
+	if rt.state == stateIdle {
 		w.WriteHeader(http.StatusServiceUnavailable)
 		_, _ = w.Write(respNotStarted)
+
 		return
 	}
 
@@ -95,15 +98,17 @@ func (rt *Runtime) handleLive(w http.ResponseWriter, _ *http.Request) {
 func (rt *Runtime) handleReady(w http.ResponseWriter, req *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 
-	currentState := rt.state.Load()
-	if currentState == uint32(stateIdle) {
+	if rt.state == stateIdle {
 		w.WriteHeader(http.StatusServiceUnavailable)
 		_, _ = w.Write(respNotStarted)
+
 		return
 	}
-	if currentState == uint32(stateShuttingDown) {
+
+	if rt.state == stateShuttingDown {
 		w.WriteHeader(http.StatusServiceUnavailable)
 		_, _ = w.Write(respShuttingDown)
+
 		return
 	}
 
@@ -115,6 +120,7 @@ func (rt *Runtime) handleReady(w http.ResponseWriter, req *http.Request) {
 	if len(checks) == 0 {
 		w.WriteHeader(http.StatusOK)
 		_, _ = w.Write(respOK)
+
 		return
 	}
 
@@ -129,6 +135,7 @@ func (rt *Runtime) handleReady(w http.ResponseWriter, req *http.Request) {
 	}
 
 	allPassed := true
+
 	for _, result := range results {
 		if result.err != nil {
 			response.Checks[result.name] = result.err.Error()
@@ -140,6 +147,7 @@ func (rt *Runtime) handleReady(w http.ResponseWriter, req *http.Request) {
 
 	if !allPassed {
 		response.Status = "fail"
+
 		w.WriteHeader(http.StatusServiceUnavailable)
 	} else {
 		w.WriteHeader(http.StatusOK)
@@ -149,8 +157,8 @@ func (rt *Runtime) handleReady(w http.ResponseWriter, req *http.Request) {
 }
 
 type checkResult struct {
-	name string
 	err  error
+	name string
 }
 
 // runChecks executes all health checks concurrently with a timeout.
@@ -193,6 +201,7 @@ func (rt *Runtime) runChecks(ctx context.Context, checks map[string]ReadinessChe
 					})
 				}
 			}
+
 			return results
 		}
 	}

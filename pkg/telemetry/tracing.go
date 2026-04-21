@@ -12,7 +12,7 @@ import (
 	"go.opentelemetry.io/otel/sdk/trace"
 	"google.golang.org/grpc/credentials"
 
-	"github.com/rizesql/mithras/pkg/logger"
+	"github.com/rizesql/mithras/pkg/telemetry/logger"
 )
 
 func ConfigureTracing(ctx context.Context, cfg *Tracing) (func(context.Context) error, error) {
@@ -32,6 +32,7 @@ func ConfigureTracing(ctx context.Context, cfg *Tracing) (func(context.Context) 
 		if err != nil {
 			return noopShutdown(), err
 		}
+
 		return newTracer(exp), nil
 	default:
 		return noopShutdown(), fmt.Errorf("%s tracing exporter is unsupported", cfg.Exporter)
@@ -60,45 +61,46 @@ func newTracer(exporter trace.SpanExporter) func(context.Context) error {
 func otlpTracingExporter(ctx context.Context, cfg *Tracing) (trace.SpanExporter, error) {
 	switch cfg.Protocol {
 	case ProtocolHTTP:
-		opts := []otlptracehttp.Option{
-			otlptracehttp.WithEndpoint(cfg.Endpoint),
-		}
-		if len(cfg.Headers) > 0 {
-			opts = append(opts, otlptracehttp.WithHeaders(cfg.Headers))
-		}
-		if cfg.URLPath != "" {
-			opts = append(opts, otlptracehttp.WithURLPath(cfg.URLPath))
-		}
-		if cfg.Insecure {
-			opts = append(opts, otlptracehttp.WithInsecure())
-		}
-
-		exp, err := otlptracehttp.New(ctx, opts...)
-		if err != nil {
-			return nil, err
-		}
-		return exp, nil
-
+		return otlpTracingHTTPExporter(ctx, cfg)
 	case ProtocolGRPC:
-		opts := []otlptracegrpc.Option{
-			otlptracegrpc.WithEndpoint(cfg.Endpoint),
-		}
-		if len(cfg.Headers) > 0 {
-			opts = append(opts, otlptracegrpc.WithHeaders(cfg.Headers))
-		}
-		if cfg.Insecure {
-			opts = append(opts, otlptracegrpc.WithInsecure())
-		} else {
-			opts = append(opts, otlptracegrpc.WithTLSCredentials(credentials.NewClientTLSFromCert(nil, "")))
-		}
-
-		exp, err := otlptracegrpc.New(ctx, opts...)
-		if err != nil {
-			return nil, err
-		}
-		return exp, nil
-
+		return otlpTracingGRPCExporter(ctx, cfg)
 	default:
 		return nil, fmt.Errorf("%s protocol is unsupported", cfg.Protocol)
 	}
+}
+
+func otlpTracingHTTPExporter(ctx context.Context, cfg *Tracing) (trace.SpanExporter, error) {
+	opts := []otlptracehttp.Option{
+		otlptracehttp.WithEndpoint(cfg.Endpoint),
+	}
+	if len(cfg.Headers) > 0 {
+		opts = append(opts, otlptracehttp.WithHeaders(cfg.Headers))
+	}
+
+	if cfg.URLPath != "" {
+		opts = append(opts, otlptracehttp.WithURLPath(cfg.URLPath))
+	}
+
+	if cfg.Insecure {
+		opts = append(opts, otlptracehttp.WithInsecure())
+	}
+
+	return otlptracehttp.New(ctx, opts...)
+}
+
+func otlpTracingGRPCExporter(ctx context.Context, cfg *Tracing) (trace.SpanExporter, error) {
+	opts := []otlptracegrpc.Option{
+		otlptracegrpc.WithEndpoint(cfg.Endpoint),
+	}
+	if len(cfg.Headers) > 0 {
+		opts = append(opts, otlptracegrpc.WithHeaders(cfg.Headers))
+	}
+
+	if cfg.Insecure {
+		opts = append(opts, otlptracegrpc.WithInsecure())
+	} else {
+		opts = append(opts, otlptracegrpc.WithTLSCredentials(credentials.NewClientTLSFromCert(nil, "")))
+	}
+
+	return otlptracegrpc.New(ctx, opts...)
 }

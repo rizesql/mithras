@@ -30,7 +30,7 @@ nuke:
 
 # Run the server
 [group("development")]
-run: up
+run: up gen
     go run ./cmd/mithras serve | hl -P
 
 # Format all code
@@ -67,6 +67,7 @@ test-race *args:
 [group("development")]
 gen:
     go generate ./...
+    rm pkg/db/delete_me.go
 
 # ------------------------------------------------------------------ #
 # Database                                                           #

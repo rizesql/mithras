@@ -20,6 +20,25 @@ sql:
         output_db_file_name: "delete_me"
 
         overrides:
+          - db_type: "text"
+            nullable: true
+            go_type:
+              type: "*string"
+
+          - db_type: "timestamptz"
+            go_type:
+              import: "time"
+              type: "Time"
+          - db_type: "timestamptz"
+            nullable: true
+            go_type:
+              type: "*time.Time"
+
+          - db_type: "key_id"
+            go_type:
+              import: "github.com/rizesql/mithras/pkg/idkit"
+              type: "KeyID"
+
           - db_type: "user_id"
             go_type:
               import: "github.com/rizesql/mithras/pkg/idkit"
@@ -34,3 +53,18 @@ sql:
             go_type:
               import: "github.com/rizesql/mithras/internal/password"
               type: "Hashed"
+
+          - column: "password_history.secret"
+            go_type:
+              import: "github.com/rizesql/mithras/internal/password"
+              type: "Hashed"
+
+          - db_type: "session_id"
+            go_type:
+              import: "github.com/rizesql/mithras/pkg/idkit"
+              type: "SessionID"
+
+          - db_type: "authorization_code_id"
+            go_type:
+              import: "github.com/rizesql/mithras/pkg/idkit"
+              type: "AuthorizationCodeID"

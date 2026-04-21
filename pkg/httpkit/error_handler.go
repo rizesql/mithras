@@ -9,7 +9,7 @@ import (
 	"github.com/rizesql/mithras/internal/errkit"
 	"github.com/rizesql/mithras/pkg/api"
 	"github.com/rizesql/mithras/pkg/api/validator"
-	"github.com/rizesql/mithras/pkg/logger"
+	"github.com/rizesql/mithras/pkg/telemetry/logger"
 )
 
 // ProblemType represents a URI reference identifying the problem type
@@ -32,7 +32,7 @@ const (
 // ErrorHandler is a function that handles errors returned by the server.
 type ErrorHandler func(c *Context, err error)
 
-func defaultErrorHandler(c *Context, err error) {
+func defaultErrorHandler(ctx *Context, err error) {
 	msg := errkit.GetPublic(err)
 	if msg == "" {
 		msg = "An unexpected error occurred."
@@ -46,7 +46,7 @@ func defaultErrorHandler(c *Context, err error) {
 	}
 
 	problemType := mapCodeToProblemType(code)
-	instance := c.req.raw.URL.Path
+	instance := ctx.req.raw.URL.Path
 
 	if errs, ok := errors.AsType[validator.ValidationErrors](err); ok {
 		response := api.BadRequestError{
@@ -56,13 +56,14 @@ func defaultErrorHandler(c *Context, err error) {
 			Detail:    new(fmt.Sprintf("%d field(s) failed validation", len(errs))),
 			Errors:    errs,
 			Instance:  new(instance),
-			RequestId: c.Req().ID(),
+			RequestId: ctx.Req().ID(),
 		}
 
-		if writeErr := c.res.ProblemJSON(status, response); writeErr != nil {
+		if writeErr := ctx.res.ProblemJSON(status, response); writeErr != nil {
 			logger.Error("server.error_handler.write_json_failed",
 				"error", writeErr)
 		}
+
 		return
 	}
 
@@ -72,10 +73,10 @@ func defaultErrorHandler(c *Context, err error) {
 		Status:    status,
 		Detail:    new(msg),
 		Instance:  new(instance),
-		RequestId: c.Req().ID(),
+		RequestId: ctx.Req().ID(),
 	}
 
-	if writeErr := c.res.ProblemJSON(status, response); writeErr != nil {
+	if writeErr := ctx.res.ProblemJSON(status, response); writeErr != nil {
 		logger.Error("server.error_handler.write_json_failed",
 			"error", writeErr)
 	}
@@ -102,6 +103,8 @@ func mapCodeToHTTPStatus(code errkit.Code) int {
 		return http.StatusInternalServerError
 	case "app.dependency":
 		return http.StatusBadGateway
+	case "app.unavailable", "system.unavailable":
+		return http.StatusServiceUnavailable
 	case "system.timeout":
 		return http.StatusGatewayTimeout
 	}

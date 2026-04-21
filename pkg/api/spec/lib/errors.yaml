@@ -93,6 +93,44 @@ RateLimitError:
         request_id: req_d6q5bg6mmrj6s3linfvg
         retry_after: "2026-03-23T12:35:00Z"
 
+UnauthorizedError:
+  description: Unauthorized
+  headers:
+    X-Request-Id:
+      $ref: "./headers.yaml#/X-Request-Id"
+  content:
+    application/problem+json:
+      schema:
+        $ref: "#/Problem"
+      description: |
+        RFC 7807 Problem Details for authentication failures (401 Unauthorized).
+      example:
+        type: https://api.mithras.com/problems/unauthorized
+        title: Unauthorized
+        status: 401
+        detail: Invalid credentials.
+        instance: /v1/auth/login
+        request_id: req_d6q5bg6mmrj6s3linfvg
+
+ForbiddenError:
+  description: Forbidden
+  headers:
+    X-Request-Id:
+      $ref: "./headers.yaml#/X-Request-Id"
+  content:
+    application/problem+json:
+      schema:
+        $ref: "#/Problem"
+      description: |
+        RFC 7807 Problem Details for authorization failures or locked accounts (403 Forbidden).
+      example:
+        type: https://api.mithras.com/problems/forbidden
+        title: Forbidden
+        status: 403
+        detail: Access denied.
+        instance: /v1/auth/login
+        request_id: req_d6q5bg6mmrj6s3linfvg
+
 InternalServerError:
   description: Internal Server Error
   headers:

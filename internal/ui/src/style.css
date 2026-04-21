@@ -1,0 +1,174 @@
+@import "tailwindcss";
+
+:root {
+  --leading-sm: 1.25;
+  --leading-md: 1.5;
+  --leading-lg: 1.875;
+  --leading-xl: 2.5;
+}
+
+@theme {
+  --text-xs: 0.75rem;
+  --text-sm: 0.8125rem;
+  --text-md: 0.875rem;
+  --text-lg: 1rem;
+  --text-xl: 1.125rem;
+  --text-2xl: 1.25rem;
+  --text-3xl: 1.5rem;
+  --text-4xl: 1.75rem;
+  --text-5xl: 2.25rem;
+  --text-6xl: 3.75rem;
+
+  --font-sans:
+    "Geist Variable", ui-sans-serif, system-ui, sans-serif, "Apple Color Emoji", "Segoe UI Emoji",
+    "Segoe UI Symbol", "Noto Color Emoji";
+  --font-mono:
+    "Geist Mono Variable", ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono",
+    "Courier New", monospace;
+
+  --color-surface-1: oklch(19.6% 0 0deg);
+  --color-surface-2: oklch(22.6% 0.0038 59.39);
+  --color-surface-3: oklch(26.1% 0.0055 59.39);
+  --color-surface-4: oklch(28.7% 0.0063 59.39);
+  --color-surface-5: oklch(31.5% 0.0078 59.39);
+  --color-surface-6: oklch(35% 0.0101 59.39);
+  --color-surface-7: oklch(40.1% 0.0117 59.39);
+  --color-surface-8: oklch(49% 0.0117 59.39);
+  --color-surface-9: oklch(53.5% 0.0117 59.39);
+  --color-surface-10: oklch(58.1% 0.0117 59.39);
+  --color-surface-11: oklch(76.7% 0.0117 59.39);
+  --color-surface-12: oklch(94.8% 0.0046 59.39);
+
+  --color-surface-a1: color(display-p3 0.8706 0.0863 0 / 0.005);
+  --color-surface-a2: color(display-p3 0.9804 0.7569 0.6431 / 0.035);
+  --color-surface-a3: color(display-p3 0.9961 0.8902 0.7843 / 0.073);
+  --color-surface-a4: color(display-p3 0.9961 0.9176 0.8353 / 0.099);
+  --color-surface-a5: color(display-p3 1 0.9098 0.8196 / 0.133);
+  --color-surface-a6: color(display-p3 0.9961 0.8863 0.7961 / 0.176);
+  --color-surface-a7: color(display-p3 1 0.9137 0.8471 / 0.236);
+  --color-surface-a8: color(display-p3 1 0.9333 0.8863 / 0.342);
+  --color-surface-a9: color(display-p3 1 0.949 0.898 / 0.394);
+  --color-surface-a10: color(display-p3 1 0.949 0.9137 / 0.453);
+  --color-surface-a11: color(display-p3 1 0.9686 0.9412 / 0.697);
+  --color-surface-a12: color(display-p3 1 0.9922 0.9843 / 0.932);
+
+  --color-surface-contrast: #ffffff;
+  --color-surface-surface: var(--color-surface-2);
+  --color-surface-indicator: oklch(53.5% 0.0117 59.39);
+  --color-surface-track: oklch(53.5% 0.0117 59.39);
+
+  --color-accent-1: oklch(19.1% 0.0106 43.3);
+  --color-accent-2: oklch(20.9% 0.0151 43.3);
+  --color-accent-3: oklch(25.4% 0.0491 43.3);
+  --color-accent-4: oklch(29.1% 0.0786 43.3);
+  --color-accent-5: oklch(33.2% 0.0877 43.3);
+  --color-accent-6: oklch(38% 0.0898 43.3);
+  --color-accent-7: oklch(44.7% 0.0964 43.3);
+  --color-accent-8: oklch(53.8% 0.1175 43.3);
+  --color-accent-9: oklch(59.7% 0.175 43.3);
+  --color-accent-10: oklch(55.4% 0.175 43.3);
+  --color-accent-11: oklch(78.4% 0.1478 43.3);
+  --color-accent-12: oklch(89.9% 0.0421 43.3);
+
+  --color-accent-a1: color(display-p3 0.9843 0 0 / 0.013);
+  --color-accent-a2: color(display-p3 0.9843 0.2824 0 / 0.039);
+  --color-accent-a3: color(display-p3 1 0.2941 0 / 0.128);
+  --color-accent-a4: color(display-p3 1 0.2706 0 / 0.205);
+  --color-accent-a5: color(display-p3 1 0.349 0.0353 / 0.264);
+  --color-accent-a6: color(display-p3 1 0.4471 0.1765 / 0.332);
+  --color-accent-a7: color(display-p3 1 0.5137 0.2902 / 0.426);
+  --color-accent-a8: color(display-p3 0.9961 0.5451 0.3294 / 0.571);
+  --color-accent-a9: color(display-p3 1 0.451 0.1647 / 0.737);
+  --color-accent-a10: color(display-p3 1 0.4118 0.1373 / 0.677);
+  --color-accent-a11: color(display-p3 1 0.6471 0.4627 / 0.941);
+  --color-accent-a12: color(display-p3 1 0.8863 0.8392 / 0.941);
+
+  --color-accent-contrast: #fff;
+  --color-accent-surface: color(display-p3 0.149 0.0941 0.0706 / 0.5);
+  --color-accent-indicator: oklch(59.7% 0.175 43.3);
+  --color-accent-track: oklch(59.7% 0.175 43.3);
+
+  --color-danger-1: oklch(19.1% 0.0132 25.1);
+  --color-danger-2: oklch(20.6% 0.0209 25.1);
+  --color-danger-3: oklch(25.1% 0.0632 25.1);
+  --color-danger-4: oklch(28.9% 0.0952 25.1);
+  --color-danger-5: oklch(33.2% 0.1059 25.1);
+  --color-danger-6: oklch(38.2% 0.1104 25.1);
+  --color-danger-7: oklch(45% 0.1194 25.1);
+  --color-danger-8: oklch(54.3% 0.1452 25.1);
+  --color-danger-9: oklch(64% 0.195 25.1);
+  --color-danger-10: oklch(59.9% 0.195 25.1);
+  --color-danger-11: oklch(78.4% 0.1631 25.1);
+  --color-danger-12: oklch(90.2% 0.0519 25.1);
+
+  --color-danger-a1: color(display-p3 0.9725 0 0 / 0.022);
+  --color-danger-a2: color(display-p3 0.9922 0.0784 0 / 0.043);
+  --color-danger-a3: color(display-p3 1 0.1059 0.0549 / 0.145);
+  --color-danger-a4: color(display-p3 1 0.098 0.0784 / 0.23);
+  --color-danger-a5: color(display-p3 1 0.2 0.1608 / 0.294);
+  --color-danger-a6: color(display-p3 1 0.3137 0.2706 / 0.366);
+  --color-danger-a7: color(display-p3 0.9961 0.4039 0.3529 / 0.469);
+  --color-danger-a8: color(display-p3 1 0.4353 0.3922 / 0.63);
+  --color-danger-a9: color(display-p3 1 0.4039 0.3686 / 0.839);
+  --color-danger-a10: color(display-p3 1 0.3569 0.3333 / 0.779);
+  --color-danger-a11: color(display-p3 1 0.6196 0.5765 / 0.937);
+  --color-danger-a12: color(display-p3 0.9961 0.851 0.8275 / 0.971);
+
+  --color-danger-contrast: #fff;
+  --color-danger-surface: color(display-p3 0.1569 0.0784 0.0706 / 0.5);
+  --color-danger-indicator: oklch(64% 0.195 25.1);
+  --color-danger-track: oklch(64% 0.195 25.1);
+
+  --spacing: 0.25rem;
+
+  --color-background: var(--color-surface-1);
+  --color-foreground: var(--color-surface-11);
+
+  --color-card: var(--color-surface-surface);
+  --color-card-foreground: var(--color-surface-11);
+
+  --color-popover: var(--color-surface-surface);
+  --color-popover-foreground: var(--color-surface-12);
+
+  --color-primary: var(--color-surface-3);
+  --color-primary-hover: var(--color-surface-4);
+  --color-primary-active: var(--color-surface-5);
+  --color-primary-foreground: var(--color-surface-12);
+
+  --color-secondary: var(--color-surface-a12);
+  --color-secondary-hover: var(--color-surface-11);
+  --color-secondary-active: var(--color-surface-a10);
+  --color-secondary-foreground: var(--color-surface-1);
+
+  --color-muted: var(--color-surface-2);
+  --color-muted-foreground: var(--color-surface-11);
+
+  --color-accent: var(--color-accent-9);
+  --color-accent-hover: var(--color-accent-8);
+  --color-accent-active: var(--color-accent-7);
+  --color-accent-foreground: var(--color-accent-contrast);
+
+  --color-destructive: var(--color-danger-9);
+  --color-destructive-hover: var(--color-danger-8);
+  --color-destructive-active: var(--color-danger-7);
+  --color-destructive-foreground: var(--color-danger-12);
+
+  --color-border: var(--color-surface-6);
+  --color-input: var(--color-surface-6);
+  --color-ring: var(--color-accent-a7);
+
+  --color-text-surface: oklch(from var(--color-surface-12) l c h / 0.8);
+  --color-text-surface-contrast: var(--color-surface-12);
+  --color-text-accent: var(--color-accent-11);
+  --color-text-accent-contrast: var(--color-accent-12);
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50 selection:bg-accent-a4;
+  }
+
+  body {
+    @apply bg-background text-foreground;
+  }
+}

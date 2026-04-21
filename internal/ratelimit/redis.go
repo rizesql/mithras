@@ -2,16 +2,14 @@ package ratelimit
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"time"
 
 	"github.com/redis/go-redis/extra/redisotel/v9"
 	"github.com/redis/go-redis/v9"
-	"go.opentelemetry.io/otel/attribute"
-	"go.opentelemetry.io/otel/trace"
 
-	"github.com/rizesql/mithras/pkg/logger"
-	"github.com/rizesql/mithras/pkg/telemetry"
+	"github.com/rizesql/mithras/pkg/telemetry/logger"
 )
 
 var allow = redis.NewScript(`
@@ -64,7 +62,7 @@ func newRedis(ctx context.Context, cfg *RedisConfig) (*RedisStore, error) {
 	logger.Info("ratelimit.redis.starting")
 
 	if cfg.URL == "" {
-		return nil, fmt.Errorf("ratelimit: redis: empty URL")
+		return nil, errors.New("ratelimit: redis: empty URL")
 	}
 
 	opts, err := redis.ParseURL(cfg.URL)
@@ -80,6 +78,7 @@ func newRedis(ctx context.Context, cfg *RedisConfig) (*RedisStore, error) {
 	if err := redisotel.InstrumentTracing(rdb); err != nil {
 		return nil, fmt.Errorf("ratelimit: failed to instrument redis tracing: %w", err)
 	}
+
 	if err := redisotel.InstrumentMetrics(rdb); err != nil {
 		return nil, fmt.Errorf("ratelimit: failed to instrument redis metrics: %w", err)
 	}
@@ -88,11 +87,13 @@ func newRedis(ctx context.Context, cfg *RedisConfig) (*RedisStore, error) {
 	defer cancel()
 
 	logger.Info("ratelimit.redis.ping")
+
 	if _, err := rdb.Ping(pingCtx).Result(); err != nil {
 		logger.Warn("redis ping failed at startup, will reconnect lazily", "error", err)
 	}
 
 	logger.Info("ratelimit.redis.connected")
+
 	return &RedisStore{rdb: rdb}, nil
 }
 
@@ -100,10 +101,11 @@ var _ Store = (*RedisStore)(nil)
 
 func (s *RedisStore) Check(ctx context.Context, req *Request) (*Response, error) {
 	if req.Identifier == "" {
-		return nil, fmt.Errorf("ratelimit: empty identifier")
+		return nil, errors.New("ratelimit: empty identifier")
 	}
+
 	if req.Limit <= 0 || req.Duration < time.Millisecond {
-		return nil, fmt.Errorf("ratelimit: invalid limit/duration")
+		return nil, errors.New("ratelimit: invalid limit/duration")
 	}
 
 	burst := req.Burst
@@ -151,47 +153,6 @@ func (s *RedisStore) Reset(ctx context.Context, key string) error {
 	if err := s.rdb.Del(ctx, key).Err(); err != nil {
 		return fmt.Errorf("ratelimit: redis reset: %w", err)
 	}
+
 	return nil
-}
-
-type telemetryStore struct {
-	inner Store
-	name  string
-}
-
-func (s *telemetryStore) Check(ctx context.Context, req *Request) (*Response, error) {
-	spanCtx, span := telemetry.Start(ctx, "ratelimit.check", trace.WithAttributes(
-		attribute.String("ratelimit.policy", s.name),
-		attribute.Int64("ratelimit.limit", req.Limit),
-	))
-	defer span.End()
-
-	res, err := s.inner.Check(ctx, req)
-	if err != nil {
-		telemetry.Err(spanCtx, err)
-	} else {
-		telemetry.Attr(spanCtx,
-			attribute.Bool("ratelimit.success", res.Success),
-			attribute.Int64("ratelimit.remaining", res.Remaining),
-		)
-	}
-
-	return res, err
-}
-
-func (s *telemetryStore) Reset(ctx context.Context, key string) error {
-	spanCtx, span := telemetry.Start(ctx, "ratelimit.reset")
-	defer span.End()
-
-	telemetry.Attr(spanCtx, attribute.String("ratelimit.key", key))
-
-	err := s.inner.Reset(spanCtx, key)
-	if err != nil {
-		telemetry.Err(spanCtx, err)
-	}
-	return err
-}
-
-func WithTelemetry(store Store, name string) *telemetryStore {
-	return &telemetryStore{inner: store, name: name}
 }

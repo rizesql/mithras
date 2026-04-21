@@ -1,0 +1,40 @@
+paths:
+  post:
+    tags:
+      - auth
+    security:
+      - refreshBearerAuth: []
+    operationId: refresh
+    summary: Refresh Token
+    description: |
+      Rotates a refresh token to obtain a new access token and continuous refresh token.
+      Provide the refresh token in the Authorization header.
+
+    responses:
+      "200":
+        description: Successful refresh. Returns new access and refresh tokens.
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RefreshResponse"
+      "401":
+        $ref: "../lib/errors.yaml#/UnauthorizedError"
+      "429":
+        $ref: "../lib/errors.yaml#/RateLimitError"
+      "500":
+        $ref: "../lib/errors.yaml#/InternalServerError"
+
+components:
+  schemas:
+    RefreshResponse:
+      type: object
+      required:
+        - access_token
+        - refresh_token
+      properties:
+        access_token:
+          description: The JWS access token signed with Ed25519.
+          type: string
+        refresh_token:
+          description: A new long-lived opaque token.
+          type: string

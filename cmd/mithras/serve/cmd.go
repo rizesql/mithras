@@ -4,8 +4,8 @@ package serve
 import (
 	"fmt"
 
-	"github.com/rizesql/mithras/services/mithras"
-
+	"github.com/rizesql/mithras/internal/mithras"
+	"github.com/rizesql/mithras/internal/mithras/config"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 )
@@ -19,8 +19,9 @@ func Command() *cobra.Command {
 		Args:  cobra.NoArgs,
 	}
 
-	cmd.Flags().AddFlagSet(mithras.Flags())
+	cmd.Flags().AddFlagSet(config.Flags())
 	cmd.SilenceUsage = true
+
 	return cmd
 }
 
@@ -29,7 +30,7 @@ func serve(cmd *cobra.Command, _ []string) error {
 		return fmt.Errorf("failed to bind flags: %w", err)
 	}
 
-	cfg, err := mithras.LoadConfig(viper.GetViper())
+	cfg, err := config.Load(viper.GetViper())
 	if err != nil {
 		return fmt.Errorf("failed to load config: %w", err)
 	}

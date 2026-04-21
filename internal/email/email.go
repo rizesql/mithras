@@ -2,14 +2,19 @@ package email
 
 import (
 	"database/sql/driver"
-	"errors"
 	"fmt"
 	"regexp"
 	"strings"
+
+	"github.com/rizesql/mithras/internal/errkit"
 )
 
 var (
-	ErrInvalidEmail = errors.New("invalid email address")
+	ErrInvalidEmail = errkit.New("invalid email address",
+		errkit.WithCode(errkit.User.Request.Code("invalid_email")),
+		errkit.Internal("email validation failed"),
+		errkit.Public("Invalid email address format."),
+	)
 
 	// We use \x60 to safely represent the backtick character inside a raw string.
 	emailRegex = regexp.MustCompile(`^[a-zA-Z0-9.!#$%&'*+/=?^_\x60{|}~-]+@[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\.[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)*\.[a-zA-Z]{2,}$`)
@@ -25,7 +30,7 @@ type Address struct {
 // Parse takes a raw email string, validates its basic structure,
 // and splits it into the Local Part and Domain.
 func Parse(raw string) (Address, error) {
-	raw = strings.TrimSpace(raw)
+	raw = strings.ToLower(strings.TrimSpace(raw))
 
 	// Validate against the exact DB Schema Regex
 	if !emailRegex.MatchString(raw) {
@@ -63,6 +68,7 @@ func (e Address) String() string {
 	}
 
 	length := len(e.local)
+
 	var maskedLocal string
 
 	switch {
@@ -81,7 +87,9 @@ func (e *Address) UnmarshalText(text []byte) error {
 	if err != nil {
 		return err
 	}
+
 	*e = parsed
+
 	return nil
 }
 
@@ -94,6 +102,7 @@ func (e Address) Value() (driver.Value, error) {
 	if e.raw == "" {
 		return nil, ErrInvalidEmail
 	}
+
 	return e.raw, nil
 }
 
@@ -103,6 +112,7 @@ func (e *Address) Scan(src any) error {
 	}
 
 	var source string
+
 	switch v := src.(type) {
 	case string:
 		source = v
@@ -118,5 +128,6 @@ func (e *Address) Scan(src any) error {
 	}
 
 	*e = parsed
+
 	return nil
 }

@@ -12,8 +12,8 @@ import (
 	"github.com/rizesql/mithras/internal/errkit"
 	"github.com/rizesql/mithras/internal/ratelimit"
 	"github.com/rizesql/mithras/pkg/httpkit"
-	"github.com/rizesql/mithras/pkg/logger"
 	"github.com/rizesql/mithras/pkg/telemetry"
+	"github.com/rizesql/mithras/pkg/telemetry/logger"
 )
 
 func WithRateLimit(policies ...ratelimit.Policy) httpkit.Middleware {
@@ -30,78 +30,85 @@ func WithRateLimit(policies ...ratelimit.Policy) httpkit.Middleware {
 	}
 
 	return func(next httpkit.HandleFunc) httpkit.HandleFunc {
-		return func(ctx context.Context, c *httpkit.Context) error {
+		return func(ctx context.Context, cx *httpkit.Context) error {
 			var mostRestrictive *ratelimit.Response
+			var restrictivePolicy string
 
-			for _, p := range wrapped {
-				key := p.KeyFunc(ctx, c)
+			for _, pol := range wrapped {
+				key := pol.KeyFunc(ctx, cx)
 				if key == "" {
-					logger.Warn("ratelimit.key_empty", "policy", p.Name)
+					logger.Warn("ratelimit.key_empty", "policy", pol.Name)
 					continue
 				}
 
 				// #nosec G115
-				res, err := p.Store.Check(ctx, &ratelimit.Request{
-					Name:       p.Name,
+				res, err := pol.Store.Check(ctx, &ratelimit.Request{
+					Name:       pol.Name,
 					Identifier: key,
-					Limit:      int64(p.MaxRequests),
-					Duration:   p.Window,
-					Burst:      int64(p.Burst),
+					Limit:      int64(pol.MaxRequests),
+					Duration:   pol.Window,
+					Burst:      int64(pol.Burst),
 				})
-
 				if err != nil {
-					if p.FailOpen {
+					if pol.FailOpen {
 						logger.Warn("ratelimit.fail_open",
-							"policy", p.Name,
+							"policy", pol.Name,
 							"error", err,
 						)
+
 						continue
 					}
 
 					return errkit.Wrap(err,
-						errkit.Code(errkit.App.Internal.Code("rate_limit_store_error")),
-						errkit.Internal(fmt.Sprintf("rate limit store error for policy %q", p.Name)),
+						errkit.App.Internal.Code("rate_limit_store_error"),
+						errkit.Internal(fmt.Sprintf("rate limit store error for policy %q", pol.Name)),
 						errkit.Public("Service temporarily unavailable. Please try again shortly."),
 					)
 				}
 
 				if mostRestrictive == nil || res.Remaining < mostRestrictive.Remaining {
 					mostRestrictive = res
+					restrictivePolicy = pol.Name
 				}
 
 				if !res.Success {
 					telemetry.Attr(ctx,
-						attribute.Bool("http.ratelimit.throttled", true),
-						attribute.String("http.ratelimit.policy", p.Name),
+						attribute.Bool("ratelimit.throttled", true),
+						attribute.String("ratelimit.policy", pol.Name),
 					)
 
-					setHeaders(c, res)
+					setHeaders(cx, res)
 
 					return errkit.New("",
-						errkit.Code(errkit.User.RateLimit.Code(p.Name)),
-						errkit.Internal(fmt.Sprintf("rate limit exceeded for policy %q", p.Name)),
+						errkit.User.RateLimit.Code(pol.Name),
+						errkit.Internal(fmt.Sprintf("rate limit exceeded for policy %q", pol.Name)),
 						errkit.Public("Too many requests. Please slow down and try again later."),
 					)
 				}
 			}
 
 			if mostRestrictive != nil {
-				setHeaders(c, mostRestrictive)
+				setHeaders(cx, mostRestrictive)
+
+				telemetry.Attr(ctx,
+					attribute.String("ratelimit.policy", restrictivePolicy),
+					attribute.Int64("ratelimit.remaining", mostRestrictive.Remaining),
+				)
 			}
 
-			return next(ctx, c)
+			return next(ctx, cx)
 		}
 	}
 }
 
-func setHeaders(c *httpkit.Context, r *ratelimit.Response) {
-	c.Res().SetHeader("X-RateLimit-Limit", strconv.FormatInt(r.Limit, 10))
-	c.Res().SetHeader("X-RateLimit-Remaining", strconv.FormatInt(r.Remaining, 10))
+func setHeaders(cx *httpkit.Context, res *ratelimit.Response) {
+	cx.Res().SetHeader("X-RateLimit-Limit", strconv.FormatInt(res.Limit, 10))
+	cx.Res().SetHeader("X-RateLimit-Remaining", strconv.FormatInt(res.Remaining, 10))
 
-	if !r.Reset.IsZero() {
-		secs := max(int(time.Until(r.Reset).Seconds()), 1)
-		c.Res().SetHeader("Retry-After", strconv.Itoa(secs))
-		c.Res().SetHeader("X-RateLimit-Reset", strconv.FormatInt(r.Reset.Unix(), 10))
+	if !res.Reset.IsZero() {
+		secs := max(int(time.Until(res.Reset).Seconds()), 1)
+		cx.Res().SetHeader("Retry-After", strconv.Itoa(secs))
+		cx.Res().SetHeader("X-RateLimit-Reset", strconv.FormatInt(res.Reset.Unix(), 10))
 	}
 }
 
@@ -112,5 +119,6 @@ func RetryAfterSeconds(header http.Header) int {
 		return 0
 	}
 	n, _ := strconv.Atoi(v)
+
 	return n
 }

@@ -6,19 +6,198 @@ package db
 
 import (
 	"context"
+	"time"
+
+	"github.com/rizesql/mithras/internal/email"
+	"github.com/rizesql/mithras/internal/password"
+	"github.com/rizesql/mithras/pkg/idkit"
 )
 
 type Querier interface {
+	//AssignRole
+	//
+	//  INSERT INTO "user_role" (user_pk, role_pk, granted_by)
+	//  VALUES ($1, (SELECT pk FROM "role" WHERE name = $2), $3)
+	AssignRole(ctx context.Context, db DBTX, arg AssignRoleParams) error
+	//ConsumeAuthorizationCode
+	//
+	//  UPDATE authorization_code
+	//  SET
+	//    used_at = now()
+	//  WHERE
+	//    code = $1
+	//    AND used_at IS NULL
+	//    AND expires_at > now()
+	//  RETURNING
+	//    code,
+	//    user_pk,
+	//    client_id,
+	//    redirect_uri,
+	//    challenge
+	ConsumeAuthorizationCode(ctx context.Context, db DBTX, code idkit.AuthorizationCodeID) (ConsumeAuthorizationCodeRow, error)
+	//GetActiveJWSKeys
+	//
+	//  SELECT
+	//    j.id,
+	//    j.data,
+	//    j.rotates_at,
+	//    j.expires_at
+	//  FROM
+	//    "jws" j
+	//  WHERE
+	//    j.expires_at > $1
+	GetActiveJWSKeys(ctx context.Context, db DBTX, now time.Time) ([]GetActiveJWSKeysRow, error)
+	//GetRecentPasswordHashes
+	//
+	//  SELECT
+	//    secret
+	//  FROM
+	//    "password_history"
+	//  WHERE
+	//    user_pk = $1
+	//  ORDER BY
+	//    created_at DESC
+	//  LIMIT $2
+	GetRecentPasswordHashes(ctx context.Context, db DBTX, arg GetRecentPasswordHashesParams) ([]password.Hashed, error)
+	//GetSessionByTokenHash
+	//
+	//  SELECT
+	//    s.pk,
+	//    s.id,
+	//    s.user_pk,
+	//    s.expires_at,
+	//    s.revoked_at,
+	//    s.user_agent,
+	//    s.ip_addr,
+	//    u.id AS user_id,
+	//    u.status AS user_status,
+	//    u.locked_until AS user_locked_until
+	//  FROM
+	//    "session" s
+	//  JOIN
+	//    "user" u ON s.user_pk = u.pk
+	//  WHERE
+	//    s.token_hash = $1
+	//  LIMIT 1
+	GetSessionByTokenHash(ctx context.Context, db DBTX, tokenHash []byte) (GetSessionByTokenHashRow, error)
+	//GetSigningKey
+	//
+	//  SELECT
+	//    j.id,
+	//    j.data,
+	//    j.rotates_at,
+	//    j.expires_at
+	//  FROM
+	//    "jws" j
+	//  WHERE
+	//    j.rotates_at > $1
+	//  ORDER BY
+	//    j.created_at DESC
+	//  LIMIT 1
+	GetSigningKey(ctx context.Context, db DBTX, now time.Time) (GetSigningKeyRow, error)
+	//GetUserByPk
+	//
+	//  SELECT pk, id, name, email, status, failed_attempts, locked_until, last_login_at, created_at, updated_at FROM "user"
+	//  WHERE pk = $1 LIMIT 1
+	GetUserByPk(ctx context.Context, db DBTX, pk int64) (User, error)
+	//GetUserRoles
+	//
+	//  SELECT
+	//    r.name
+	//  FROM
+	//    "role" r
+	//  JOIN
+	//    "user_role" ur ON r.pk = ur.role_pk
+	//  WHERE
+	//    ur.user_pk = $1
+	GetUserRoles(ctx context.Context, db DBTX, userPk int64) ([]string, error)
+	//GetUserWithPassword
+	//
+	//  SELECT
+	//    u.pk,
+	//    u.id,
+	//    u.status,
+	//    u.failed_attempts,
+	//    u.locked_until,
+	//    cp.secret
+	//  FROM
+	//    "user" u
+	//  JOIN
+	//    "credential_password" cp ON u.pk = cp.user_pk
+	//  WHERE
+	//    u.email = $1
+	//  LIMIT 1
+	GetUserWithPassword(ctx context.Context, db DBTX, argEmail email.Address) (GetUserWithPasswordRow, error)
+	//InsertAuthorizationCode
+	//
+	//  INSERT INTO authorization_code (
+	//    code,
+	//    user_pk,
+	//    client_id,
+	//    redirect_uri,
+	//    challenge,
+	//    expires_at
+	//  ) VALUES (
+	//    $1,
+	//    $2,
+	//    $3,
+	//    $4,
+	//    $5,
+	//    $6
+	//  ) RETURNING
+	//    code,
+	//    client_id,
+	//    redirect_uri,
+	//    challenge,
+	//    expires_at
+	InsertAuthorizationCode(ctx context.Context, db DBTX, arg InsertAuthorizationCodeParams) (InsertAuthorizationCodeRow, error)
 	//InsertCredential
 	//
 	//  INSERT INTO "credential_password" (
-	//    user_id,
+	//    user_pk,
 	//    secret
 	//  ) VALUES  (
 	//    $1,
 	//    $2
 	//  )
 	InsertCredential(ctx context.Context, db DBTX, arg InsertCredentialParams) error
+	//InsertJWSKey
+	//
+	//  INSERT INTO "jws" (
+	//    id,
+	//    data,
+	//    rotates_at,
+	//    expires_at
+	//  ) VALUES (
+	//    $1,
+	//    $2,
+	//    $3,
+	//    $4
+	//  )
+	InsertJWSKey(ctx context.Context, db DBTX, arg InsertJWSKeyParams) error
+	//InsertPasswordHistory
+	//
+	//  INSERT INTO "password_history" (user_pk, secret)
+	//  VALUES ($1, $2)
+	InsertPasswordHistory(ctx context.Context, db DBTX, arg InsertPasswordHistoryParams) error
+	//InsertSession
+	//
+	//  INSERT INTO "session" (
+	//    id,
+	//    user_pk,
+	//    token_hash,
+	//    user_agent,
+	//    ip_addr,
+	//    expires_at
+	//  ) VALUES (
+	//    $1,
+	//    $2,
+	//    $3,
+	//    $4,
+	//    $5,
+	//    $6
+	//  )
+	InsertSession(ctx context.Context, db DBTX, arg InsertSessionParams) error
 	//InsertUser
 	//
 	//  INSERT INTO "user" (
@@ -30,7 +209,121 @@ type Querier interface {
 	//    $2,
 	//    $3
 	//  )
-	InsertUser(ctx context.Context, db DBTX, arg InsertUserParams) error
+	//  RETURNING pk
+	InsertUser(ctx context.Context, db DBTX, arg InsertUserParams) (int64, error)
+	//LockAccount
+	//
+	//  UPDATE "user"
+	//  SET
+	//    status = 'locked',
+	//    locked_until = $1,
+	//    updated_at = now()
+	//  WHERE
+	//    pk = $2
+	LockAccount(ctx context.Context, db DBTX, arg LockAccountParams) error
+	//PasswordResetGetActive
+	//
+	//  SELECT
+	//    pk,
+	//    id,
+	//    user_pk,
+	//    token_hash,
+	//    expires_at
+	//  FROM
+	//    "password_reset"
+	//  WHERE
+	//    id = $1
+	//    AND used_at IS NULL
+	//    AND expires_at > now()
+	//  LIMIT 1
+	PasswordResetGetActive(ctx context.Context, db DBTX, id interface{}) (PasswordResetGetActiveRow, error)
+	//PasswordResetInsert
+	//
+	//  INSERT INTO "password_reset" (
+	//    id,
+	//    user_pk,
+	//    token_hash,
+	//    user_agent,
+	//    ip_addr,
+	//    expires_at
+	//  ) VALUES (
+	//    $1, $2, $3, $4, $5, $6
+	//  ) RETURNING pk
+	PasswordResetInsert(ctx context.Context, db DBTX, arg PasswordResetInsertParams) (int64, error)
+	//PasswordResetInvalidateSiblings
+	//
+	//  UPDATE "password_reset"
+	//  SET used_at = now()
+	//  WHERE user_pk = $1 AND used_at IS NULL AND pk != $2
+	PasswordResetInvalidateSiblings(ctx context.Context, db DBTX, arg PasswordResetInvalidateSiblingsParams) error
+	//PasswordResetMarkUsed
+	//
+	//  UPDATE "password_reset"
+	//  SET used_at = now()
+	//  WHERE pk = $1
+	PasswordResetMarkUsed(ctx context.Context, db DBTX, pk int64) error
+	//PruneJWS
+	//
+	//  DELETE FROM "jws"
+	//  WHERE expires_at < $1
+	PruneJWS(ctx context.Context, db DBTX, now time.Time) error
+	//RecordLoginFailure
+	//
+	//  UPDATE "user"
+	//  SET
+	//    failed_attempts = failed_attempts + 1,
+	//    updated_at = now()
+	//  WHERE
+	//    pk = $1
+	RecordLoginFailure(ctx context.Context, db DBTX, userPk int64) error
+	//RecordLoginSuccess
+	//
+	//  UPDATE "user"
+	//  SET
+	//    failed_attempts = 0,
+	//    locked_until = NULL,
+	//    status = 'active',
+	//    last_login_at = now(),
+	//    updated_at = now()
+	//  WHERE
+	//    pk = $1
+	RecordLoginSuccess(ctx context.Context, db DBTX, userPk int64) error
+	//RevokeSession
+	//
+	//  UPDATE "session"
+	//  SET revoked_at = now()
+	//  WHERE pk = $1 AND revoked_at IS NULL
+	RevokeSession(ctx context.Context, db DBTX, pk int64) (int64, error)
+	//RevokeUserSessions
+	//
+	//  UPDATE "session"
+	//  SET
+	//    revoked_at = $1
+	//  WHERE
+	//    user_pk = $2
+	//  AND
+	//    revoked_at IS NULL
+	RevokeUserSessions(ctx context.Context, db DBTX, arg RevokeUserSessionsParams) error
+	//UpdateCredentialByUserId
+	//
+	//  UPDATE "credential_password"
+	//  SET
+	//    secret = $1,
+	//    updated_at = now()
+	//  WHERE
+	//    user_pk = $2
+	UpdateCredentialByUserId(ctx context.Context, db DBTX, arg UpdateCredentialByUserIdParams) error
+	//UpdateUserStatus
+	//
+	//  UPDATE "user"
+	//  SET
+	//    status = $1,
+	//    locked_until = CASE WHEN $1 = 'active'::user_status THEN NULL ELSE locked_until END,
+	//    failed_attempts = CASE WHEN $1 = 'active'::user_status THEN 0 ELSE failed_attempts END,
+	//    updated_at = now()
+	//  WHERE
+	//    pk = $2
+	UpdateUserStatus(ctx context.Context, db DBTX, arg UpdateUserStatusParams) error
 }
 
 var _ Querier = (*Queries)(nil)

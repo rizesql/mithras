@@ -1,15 +1,15 @@
 package status
 
 import (
+	"errors"
 	"fmt"
 	"strings"
 
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 
+	"github.com/rizesql/mithras/internal/datastore"
 	"github.com/rizesql/mithras/pkg/cli"
-	"github.com/rizesql/mithras/pkg/logger"
-	"github.com/rizesql/mithras/services/datastore"
 )
 
 func Command() *cobra.Command {
@@ -22,12 +22,11 @@ func Command() *cobra.Command {
 
 	cmd.Flags().AddFlagSet(datastore.Flags())
 	cmd.SilenceUsage = true
+
 	return cmd
 }
 
 func status(cmd *cobra.Command, _ []string) error {
-	out := cli.Default()
-
 	if err := viper.BindPFlags(cmd.Flags()); err != nil {
 		return fmt.Errorf("failed to bind flags: %w", err)
 	}
@@ -37,11 +36,10 @@ func status(cmd *cobra.Command, _ []string) error {
 		return fmt.Errorf("failed to load config: %w", err)
 	}
 
-	logger.Configure(cfg.Logs)
-	logger.SetHandler(cli.NewSlogHandler(out))
+	cli.Configure(cfg.Logs.Enabled, cfg.Logs.Level)
 
 	if cfg.DB.URI == "" {
-		return fmt.Errorf("database URI not configured")
+		return errors.New("database URI not configured")
 	}
 
 	status, err := datastore.Status(cmd.Context(), &cfg)
@@ -49,35 +47,37 @@ func status(cmd *cobra.Command, _ []string) error {
 		return fmt.Errorf("failed to get status: %w", err)
 	}
 
-	out.Header("Database Migration Status")
-	out.Label("Schema", cfg.DB.SchemaName)
-	out.Label("Migrations Table", cfg.DB.MigrationsTable)
-	out.Label("Current Version", fmt.Sprintf("%d", status.CurrentVersion))
-	out.Raw("")
+	cli.Header("Database Migration Status")
+	cli.Label("Schema", cfg.DB.SchemaName)
+	cli.Label("Migrations Table", cfg.DB.MigrationsTable)
+	cli.Label("Current Version", fmt.Sprintf("%d", status.CurrentVersion))
+	cli.Raw("")
 
 	if status.IsUpToDate {
-		out.Success("Database is up to date")
-		out.Subtle("Applied %d of %d migrations", status.AppliedCount, status.TotalMigrations)
+		cli.Success("Database is up to date")
+		cli.Subtle("Applied %d of %d migrations", status.AppliedCount, status.TotalMigrations)
 	} else {
-		out.Warn("Database has pending migrations")
-		out.Subtle("Applied: %d of %d migrations", status.AppliedCount, status.TotalMigrations)
-		out.Raw("")
-		out.Label("Pending", fmt.Sprintf("%d migration(s)", status.PendingCount))
+		cli.Warn("Database has pending migrations")
+		cli.Subtle("Applied: %d of %d migrations", status.AppliedCount, status.TotalMigrations)
+		cli.Raw("")
+		cli.Label("Pending", fmt.Sprintf("%d migration(s)", status.PendingCount))
 
 		// Show pending versions (limit to first 10 for readability)
 		showCount := min(status.PendingCount, 10)
+
 		versions := make([]string, showCount)
 		for i := range versions {
 			versions[i] = fmt.Sprintf("%d", status.PendingVersions[i])
 		}
-		out.Subtle("Versions: %s", strings.Join(versions, ", "))
+
+		cli.Subtle("Versions: %s", strings.Join(versions, ", "))
 
 		if status.PendingCount > 10 {
-			out.Subtle("... and %d more", status.PendingCount-10)
+			cli.Subtle("... and %d more", status.PendingCount-10)
 		}
 
-		out.Raw("")
-		out.Info("Run 'mithras datastore migrate' to apply pending migrations")
+		cli.Raw("")
+		cli.Info("Run 'mithras datastore migrate' to apply pending migrations")
 	}
 
 	return nil

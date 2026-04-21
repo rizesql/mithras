@@ -5,25 +5,144 @@
 package db
 
 import (
+	"database/sql/driver"
+	"fmt"
+	"net/netip"
+	"time"
+
 	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/rizesql/mithras/internal/email"
 	"github.com/rizesql/mithras/internal/password"
 	"github.com/rizesql/mithras/pkg/idkit"
 )
 
+type UserStatus string
+
+const (
+	UserStatusActive    UserStatus = "active"
+	UserStatusSuspended UserStatus = "suspended"
+	UserStatusLocked    UserStatus = "locked"
+)
+
+func (e *UserStatus) Scan(src interface{}) error {
+	switch s := src.(type) {
+	case []byte:
+		*e = UserStatus(s)
+	case string:
+		*e = UserStatus(s)
+	default:
+		return fmt.Errorf("unsupported scan type for UserStatus: %T", src)
+	}
+	return nil
+}
+
+type NullUserStatus struct {
+	UserStatus UserStatus
+	Valid      bool // Valid is true if UserStatus is not NULL
+}
+
+// Scan implements the Scanner interface.
+func (ns *NullUserStatus) Scan(value interface{}) error {
+	if value == nil {
+		ns.UserStatus, ns.Valid = "", false
+		return nil
+	}
+	ns.Valid = true
+	return ns.UserStatus.Scan(value)
+}
+
+// Value implements the driver Valuer interface.
+func (ns NullUserStatus) Value() (driver.Value, error) {
+	if !ns.Valid {
+		return nil, nil
+	}
+	return string(ns.UserStatus), nil
+}
+
+type AuthorizationCode struct {
+	Pk          int64                     `db:"pk"`
+	Code        idkit.AuthorizationCodeID `db:"code"`
+	UserPk      int64                     `db:"user_pk"`
+	ClientID    string                    `db:"client_id"`
+	RedirectUri string                    `db:"redirect_uri"`
+	Scopes      []string                  `db:"scopes"`
+	Challenge   string                    `db:"challenge"`
+	CreatedAt   time.Time                 `db:"created_at"`
+	ExpiresAt   time.Time                 `db:"expires_at"`
+	UsedAt      *time.Time                `db:"used_at"`
+}
+
 type CredentialPassword struct {
-	Pk        int64              `db:"pk"`
-	UserID    idkit.UserID       `db:"user_id"`
-	Secret    password.Hashed    `db:"secret"`
-	CreatedAt pgtype.Timestamptz `db:"created_at"`
-	UpdatedAt pgtype.Timestamptz `db:"updated_at"`
+	Pk        int64           `db:"pk"`
+	UserPk    int64           `db:"user_pk"`
+	Secret    password.Hashed `db:"secret"`
+	CreatedAt time.Time       `db:"created_at"`
+	UpdatedAt time.Time       `db:"updated_at"`
+}
+
+type Jw struct {
+	Pk        int64       `db:"pk"`
+	ID        idkit.KeyID `db:"id"`
+	Data      []byte      `db:"data"`
+	CreatedAt time.Time   `db:"created_at"`
+	RotatesAt time.Time   `db:"rotates_at"`
+	ExpiresAt time.Time   `db:"expires_at"`
+}
+
+type PasswordHistory struct {
+	Pk        int64           `db:"pk"`
+	UserPk    int64           `db:"user_pk"`
+	Secret    password.Hashed `db:"secret"`
+	CreatedAt time.Time       `db:"created_at"`
+}
+
+type PasswordReset struct {
+	Pk        int64       `db:"pk"`
+	ID        interface{} `db:"id"`
+	UserPk    int64       `db:"user_pk"`
+	TokenHash []byte      `db:"token_hash"`
+	UserAgent *string     `db:"user_agent"`
+	IpAddr    netip.Addr  `db:"ip_addr"`
+	ExpiresAt time.Time   `db:"expires_at"`
+	UsedAt    *time.Time  `db:"used_at"`
+	CreatedAt time.Time   `db:"created_at"`
+}
+
+type Role struct {
+	Pk          int64     `db:"pk"`
+	Name        string    `db:"name"`
+	Description string    `db:"description"`
+	CreatedAt   time.Time `db:"created_at"`
+}
+
+type Session struct {
+	Pk        int64           `db:"pk"`
+	ID        idkit.SessionID `db:"id"`
+	UserPk    int64           `db:"user_pk"`
+	TokenHash []byte          `db:"token_hash"`
+	UserAgent *string         `db:"user_agent"`
+	IpAddr    netip.Addr      `db:"ip_addr"`
+	ExpiresAt time.Time       `db:"expires_at"`
+	RevokedAt *time.Time      `db:"revoked_at"`
+	CreatedAt time.Time       `db:"created_at"`
 }
 
 type User struct {
-	Pk        int64              `db:"pk"`
-	ID        idkit.UserID       `db:"id"`
-	Name      string             `db:"name"`
-	Email     email.Address      `db:"email"`
-	CreatedAt pgtype.Timestamptz `db:"created_at"`
-	UpdatedAt pgtype.Timestamptz `db:"updated_at"`
+	Pk             int64         `db:"pk"`
+	ID             idkit.UserID  `db:"id"`
+	Name           string        `db:"name"`
+	Email          email.Address `db:"email"`
+	Status         UserStatus    `db:"status"`
+	FailedAttempts int32         `db:"failed_attempts"`
+	LockedUntil    *time.Time    `db:"locked_until"`
+	LastLoginAt    *time.Time    `db:"last_login_at"`
+	CreatedAt      time.Time     `db:"created_at"`
+	UpdatedAt      time.Time     `db:"updated_at"`
+}
+
+type UserRole struct {
+	UserPk    int64       `db:"user_pk"`
+	RolePk    int64       `db:"role_pk"`
+	GrantedAt time.Time   `db:"granted_at"`
+	GrantedBy pgtype.Int8 `db:"granted_by"`
 }

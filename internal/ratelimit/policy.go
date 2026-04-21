@@ -11,7 +11,7 @@ type Policy struct {
 	// MaxRequests is the number of requests allowed per Window.
 	MaxRequests uint64
 
-	// Burst controls token-bucket burst behaviour:
+	// Burst controls token-bucket burst behavior:
 	//   1              — strict, no burst (use for per-account / per-token policies)
 	//   == MaxRequests — full burst allowed (use for per-IP policies)
 	Burst int
@@ -27,7 +27,7 @@ type Policy struct {
 	// construction time — always provide a store.
 	Store Store
 
-	// FailOpen controls behaviour when Store returns an error:
+	// FailOpen controls behavior when Store returns an error:
 	//   true  — the request is allowed through (availability over security)
 	//   false — the request is rejected with 503 (security over availability)
 	//
@@ -47,7 +47,8 @@ func WithStore(store Store) PolicyOption {
 }
 
 // WithBurst enables token accumulation up to the maximum request limit.
-// This is the recommended "pit of success" override for basic per-IP policies to accommodate NAT spikes.
+// This is the recommended "pit of success" override for basic per-IP policies to
+// accommodate NAT spikes.
 func WithBurst() PolicyOption {
 	// #nosec G115
 	return func(p *Policy) {
@@ -64,8 +65,15 @@ func WithFailOpen() PolicyOption {
 
 // NewPolicy creates a new rate limit policy with secure "pit of success" defaults:
 // - Strict Burst (1) prevents payload spikes. Use WithFullBurst() for IP-based policies.
-// - FailClosed (FailOpen = false) prioritizes security over availability. Use WithFailOpen(true) for public endpoints.
-func NewPolicy(name string, maxRequests uint64, window time.Duration, keyFunc KeyFunc, opts ...PolicyOption) Policy {
+// - FailClosed (FailOpen = false) prioritizes security over availability.
+// Use WithFailOpen(true) for public endpoints.
+func NewPolicy(
+	name string,
+	maxRequests uint64,
+	window time.Duration,
+	keyFunc KeyFunc,
+	opts ...PolicyOption,
+) Policy {
 	p := Policy{
 		Name:        name,
 		MaxRequests: maxRequests,

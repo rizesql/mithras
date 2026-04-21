@@ -9,9 +9,51 @@ servers:
   - url: http://localhost:8080
 
 paths:
-  /v2/register:
-    post:
-      $ref: "./paths/v2_register.yaml#/paths/post"
+  /.well-known/jwks.json:
+    get:
+      $ref: "./paths/well_known_jwks.yaml#/paths/get"
 
-security:
-  - rootKey: []
+  /.well-known/oauth-authorization-server:
+    get:
+      $ref: "./paths/well_known_oas.yaml#/paths/get"
+
+  /authorize:
+    get:
+      $ref: "./paths/authorize.yaml#/paths/get"
+
+  /token:
+    post:
+      $ref: "./paths/token.yaml#/paths/post"
+
+  /register:
+    post:
+      $ref: "./paths/register.yaml#/paths/post"
+
+  /login:
+    post:
+      $ref: "./paths/login.yaml#/paths/post"
+
+  /forgot-password:
+    post:
+      $ref: "./paths/forgot_password.yaml#/paths/post"
+
+  /reset-password:
+    post:
+      $ref: "./paths/reset_password.yaml#/paths/post"
+
+components:
+  securitySchemes:
+    jwtBearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: |
+        Short-lived Ed25519-signed Access Token.
+        Provide this token in the `Authorization: Bearer <token>` header for standard API requests.
+
+    refreshBearerAuth:
+      type: http
+      scheme: bearer
+      description: |
+        Long-lived opaque Refresh Token.
+        Provide this token in the `Authorization: Bearer <token>` header exclusively for the `/v2/refresh` endpoint.

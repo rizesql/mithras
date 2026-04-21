@@ -2,13 +2,17 @@
 package cli
 
 import (
+	"context"
 	"fmt"
 	"io"
+	"log/slog"
 	"os"
 	"strings"
 
 	"github.com/fatih/color"
 	"github.com/spf13/pflag"
+
+	"github.com/rizesql/mithras/pkg/telemetry/logger"
 )
 
 var (
@@ -25,6 +29,15 @@ var (
 	headerColor  = color.New(color.FgBlue, color.Bold)
 	labelColor   = color.New(color.FgCyan)
 	pathColor    = color.New(color.FgWhite)
+
+	// Custom log levels for semantic CLI output.
+	// We use high values to distinguish UI messages from internal telemetry.
+	LevelSubtle  = slog.Level(20)
+	LevelRaw     = slog.Level(21)
+	LevelInfo    = slog.Level(22)
+	LevelHeader  = slog.Level(23)
+	LevelSuccess = slog.Level(24)
+	LevelLabel   = slog.Level(25)
 )
 
 // Output represents the CLI output handler
@@ -52,14 +65,8 @@ func (o *Output) Flags() *pflag.FlagSet {
 	f := pflag.NewFlagSet("", pflag.ContinueOnError)
 	f.BoolVarP(&o.verbose, "verbose", "v", o.verbose, "enable verbose output")
 	f.BoolVarP(&o.noColor, "no-color", "n", o.noColor, "disable color output")
-	return f
-}
 
-// Configure executes side-effects structurally based on the natively parsed state.
-func (o *Output) Configure() {
-	if o.noColor {
-		color.NoColor = true
-	}
+	return f
 }
 
 // IsVerbose returns whether verbose mode is enabled
@@ -167,6 +174,7 @@ func (o *Output) prefix(symbol string) string {
 	if o.noColor {
 		return symbol
 	}
+
 	switch symbol {
 	case "✓":
 		return successColor.Sprint(symbol)
@@ -181,6 +189,21 @@ func (o *Output) prefix(symbol string) string {
 	}
 }
 
+// Configure sets up the global logger for CLI output.
+func Configure(enabled bool, level slog.Level) {
+	if defaultOutput.noColor {
+		color.NoColor = true
+	}
+
+	logger.Configure(&logger.Config{
+		Enabled:  enabled,
+		Level:    level,
+		Format:   logger.FormatJSON, // Doesn't matter as we override it
+		Handlers: []logger.HandlerEntry{{Exporter: logger.ExporterStdout}},
+	})
+	logger.SetHandler(NewSlogHandler(defaultOutput, level))
+}
+
 // Package-level convenience functions (use default output)
 
 var defaultOutput = New()
@@ -192,42 +215,42 @@ func Default() *Output {
 
 // Success prints a success message using the default output
 func Success(format string, args ...any) {
-	defaultOutput.Success(format, args...)
+	logger.Log(context.Background(), LevelSuccess, fmt.Sprintf(format, args...))
 }
 
 // Error prints an error message using the default output
 func Error(format string, args ...any) {
-	defaultOutput.Error(format, args...)
+	logger.Log(context.Background(), slog.LevelError, fmt.Sprintf(format, args...))
 }
 
 // Warn prints a warning message using the default output
 func Warn(format string, args ...any) {
-	defaultOutput.Warn(format, args...)
+	logger.Log(context.Background(), slog.LevelWarn, fmt.Sprintf(format, args...))
 }
 
 // Info prints an info message using the default output
 func Info(format string, args ...any) {
-	defaultOutput.Info(format, args...)
+	logger.Log(context.Background(), LevelInfo, fmt.Sprintf(format, args...))
 }
 
 // Header prints a header message using the default output
 func Header(format string, args ...any) {
-	defaultOutput.Header(format, args...)
+	logger.Log(context.Background(), LevelHeader, fmt.Sprintf(format, args...))
 }
 
 // Subtle prints a subtle message using the default output
 func Subtle(format string, args ...any) {
-	defaultOutput.Subtle(format, args...)
+	logger.Log(context.Background(), LevelSubtle, fmt.Sprintf(format, args...))
 }
 
 // Label prints a labeled value using the default output
 func Label(label, value string) {
-	defaultOutput.Label(label, value)
+	logger.Log(context.Background(), LevelLabel, label, "value", value)
 }
 
 // Verbose prints a verbose message using the default output
 func Verbose(format string, args ...any) {
-	defaultOutput.Verbose(format, args...)
+	logger.Log(context.Background(), slog.LevelDebug, fmt.Sprintf(format, args...))
 }
 
 // Block prints a block of text using the default output
@@ -237,10 +260,101 @@ func Block(text string) {
 
 // Raw prints raw text using the default output
 func Raw(format string, args ...any) {
-	defaultOutput.Raw(format, args...)
+	logger.Log(context.Background(), LevelRaw, fmt.Sprintf(format, args...))
 }
 
 // Fatal prints an error and exits using the default output
 func Fatal(format string, args ...any) {
-	defaultOutput.Fatal(format, args...)
+	Error(format, args...)
+	os.Exit(1)
+}
+
+// SlogHandler implements slog.Handler to route structured traces seamlessly into the CLI
+// Output renderer.
+type SlogHandler struct {
+	out *Output
+}
+
+// NewSlogHandler creates a natively mapped handler wrapping the provided CLI interface.
+func NewSlogHandler(out *Output, _ slog.Level) *SlogHandler {
+	return &SlogHandler{out: out}
+}
+
+// Enabled reports whether the handler handles natively structured records at the given
+// architectural severity.
+func (h *SlogHandler) Enabled(_ context.Context, level slog.Level) bool {
+	// UI levels (high range) are always enabled.
+	if level >= LevelSubtle {
+		return true
+	}
+
+	// Errors and Warnings are always enabled as they are critical user-facing info.
+	if level >= slog.LevelWarn {
+		return true
+	}
+
+	// For standard telemetry (Info, Debug), require verbose mode.
+	if h.out.IsVerbose() {
+		return level >= slog.LevelDebug
+	}
+
+	return false
+}
+
+// Handle rigidly formats and colorizes the slog.Record mapping natively to the UI.
+func (h *SlogHandler) Handle(_ context.Context, r slog.Record) error {
+	// Format the primary message explicitly based on severity level
+	switch r.Level {
+	case slog.LevelError:
+		h.out.Error("%s", r.Message)
+	case slog.LevelWarn:
+		h.out.Warn("%s", r.Message)
+	case slog.LevelInfo:
+		h.out.Info("%s", r.Message)
+	case LevelInfo:
+		h.out.Info("%s", r.Message)
+	case LevelHeader:
+		h.out.Header("%s", r.Message)
+	case LevelSuccess:
+		h.out.Success("%s", r.Message)
+	case LevelLabel:
+		var val string
+		r.Attrs(func(a slog.Attr) bool {
+			val = fmt.Sprintf("%v", a.Value.Any())
+			return false
+		})
+		h.out.Label(r.Message, val)
+		return nil
+	case LevelSubtle:
+		h.out.Subtle("%s", r.Message)
+	case LevelRaw:
+		h.out.Raw("%s", r.Message)
+	case slog.LevelDebug:
+		h.out.Verbose("%s", r.Message)
+	default:
+		h.out.Raw("%s", r.Message)
+	}
+
+	// If there are attached attributes dynamically attached to the trace, gracefully render
+	// them natively beneath
+	if r.NumAttrs() > 0 && r.Level != LevelLabel {
+		r.Attrs(func(a slog.Attr) bool {
+			h.out.Subtle("%s=%v", a.Key, a.Value.Any())
+			return true
+		})
+	}
+
+	return nil
+}
+
+// WithAttrs returns a safely copied Handler with structural attributes.
+func (h *SlogHandler) WithAttrs(_ []slog.Attr) slog.Handler {
+	// For CLI UI implementations we dynamically ignore persisting base attributes natively
+	// to prevent console clutter.
+	return h
+}
+
+// WithGroup seamlessly returns a statically structured group without crashing string bounds.
+func (h *SlogHandler) WithGroup(_ string) slog.Handler {
+	return h
 }

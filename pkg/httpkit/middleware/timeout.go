@@ -32,7 +32,7 @@ func WithTimeout(timeout time.Duration) httpkit.Middleware {
 
 			if errors.Is(err, context.Canceled) {
 				return errkit.Wrap(err,
-					errkit.Code(errkit.User.Request.Code("client_closed_request")),
+					errkit.User.Request.Code("client_closed_request"),
 					errkit.Internal("The client closed the connection before the request completed"),
 					errkit.Public("Client closed request"),
 				)
@@ -40,7 +40,7 @@ func WithTimeout(timeout time.Duration) httpkit.Middleware {
 
 			if errors.Is(err, context.DeadlineExceeded) {
 				return errkit.Wrap(err,
-					errkit.Code(errkit.System.Timeout.Code("request_timeout")),
+					errkit.System.Timeout.Code("request_timeout"),
 					errkit.Internal("The request exceeded the maximum processing time"),
 					errkit.Public("Request timeout"),
 				)

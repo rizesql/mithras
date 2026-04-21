@@ -1,0 +1,80 @@
+paths:
+  post:
+    tags:
+      - auth
+    security: []
+    operationId: register
+    summary: Register
+    description: |
+      Creates a new user account.
+
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/RegisterRequest"
+
+    responses:
+      "302":
+        description: Redirects to the client's redirect URI with an authorization code.
+      "303":
+        description: Redirect back to register form with error
+      # "201":
+      #   description: User registered successfully.
+      #   headers:
+      #     X-Request-Id:
+      #       $ref: "../lib/headers.yaml#/X-Request-Id"
+      #   content:
+      #     application/json:
+      #       schema:
+      #         $ref: "#/components/schemas/RegisterResponse"
+
+      "400":
+        $ref: "../lib/errors.yaml#/BadRequestError"
+      "429":
+        $ref: "../lib/errors.yaml#/RateLimitError"
+      "500":
+        $ref: "../lib/errors.yaml#/InternalServerError"
+
+components:
+  schemas:
+    RegisterRequest:
+      type: object
+      required: [name, email, password]
+      additionalProperties: false
+
+      properties:
+        name:
+          description: The user's preferred name.
+          type: string
+          minLength: 1
+          maxLength: 255
+          example: Alice
+
+        email:
+          description: The user's email address.
+          type: string
+          format: email
+          example: alice@mithras.com
+
+        password:
+          description: |
+            The user's chosen password. Must be at least 8 characters long and contain
+            at least one uppercase letter, one lowercase letter, one digit, and one special character.
+          type: string
+          format: password
+          minLength: 8
+          maxLength: 256
+          # pattern: '^(?=.*[A-Z])(?=.*[a-z])(?=.*\d)(?=.*[\W_]).+$'
+
+    RegisterResponse:
+      type: object
+      required:
+        - id
+      additionalProperties: false
+      properties:
+        id:
+          description: The unique identifier for the created user.
+          type: string
+          example: usr_24abcde1234567890fgh

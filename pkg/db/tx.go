@@ -14,8 +14,12 @@ import (
 	"github.com/rizesql/mithras/pkg/telemetry"
 )
 
-func TxWithResult[T any](ctx context.Context, db *Database, fn func(tx DBTX) (T, error)) (t T, err error) {
-	tx, err := db.pool.Begin(ctx)
+func TxWithResult[T any](
+	ctx context.Context,
+	db *Database,
+	fn func(tx DBTX) (T, error),
+) (t T, err error) {
+	tx, err := db.Begin(ctx)
 	if err != nil {
 		return t, fmt.Errorf("failed to begin transaction: %w", err)
 	}
@@ -49,12 +53,17 @@ func Tx(ctx context.Context, db *Database, fn func(tx DBTX) error) error {
 	_, err := TxWithResult(ctx, db, func(tx DBTX) (int, error) {
 		return 0, fn(tx)
 	})
+
 	return err
 }
 
-func TxWithResultRetry[T any](ctx context.Context, db *Database, fn func(DBTX) (T, error)) (T, error) {
-	spanCtx, span := telemetry.Start(ctx, "db.tx_retry_wrapper")
-	defer span.End()
+func TxWithResultRetry[T any](
+	ctx context.Context,
+	db *Database,
+	fn func(DBTX) (T, error),
+) (t T, err error) {
+	ctx, span := telemetry.Start(ctx, "db.tx_retry_wrapper")
+	defer telemetry.End(span, &err)
 
 	policy := retry.New(
 		retry.Attempts(max(1, db.maxRetries)),
@@ -68,18 +77,14 @@ func TxWithResultRetry[T any](ctx context.Context, db *Database, fn func(DBTX) (
 		attempts++
 
 		if attempts > 1 {
-			telemetry.Event(spanCtx, "db.tx.retry_attempt", attribute.Int("attempt", attempts))
-			telemetry.Attr(spanCtx, attribute.Bool("db.tx.retried", true))
+			telemetry.Event(ctx, "db.tx.retry_attempt", attribute.Int("attempt", attempts))
+			telemetry.Attr(ctx, attribute.Bool("db.tx.retried", true))
 		}
 
 		return TxWithResult(ctx, db, fn)
 	})
 
-	telemetry.Attr(spanCtx, attribute.Int("db.tx.total_attempts", attempts))
-
-	if err != nil {
-		telemetry.Err(spanCtx, err)
-	}
+	telemetry.Attr(ctx, attribute.Int("db.tx.total_attempts", attempts))
 
 	return res, err
 }
@@ -88,6 +93,7 @@ func TxRetry(ctx context.Context, db *Database, fn func(tx DBTX) error) error {
 	_, err := TxWithResultRetry(ctx, db, func(tx DBTX) (any, error) {
 		return nil, fn(tx)
 	})
+
 	return err
 }
 

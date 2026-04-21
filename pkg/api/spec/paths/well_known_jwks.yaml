@@ -1,0 +1,121 @@
+paths:
+  get:
+    tags:
+      - well-known
+    security: []
+    operationId: jwks
+    summary: JSON Web Key Set
+    description: |
+      Returns the public keys used to verify issued JWTs.
+
+    responses:
+      "200":
+        description: JWKS response
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/JWKS"
+
+      "429":
+        $ref: "../lib/errors.yaml#/RateLimitError"
+
+      "500":
+        $ref: "../lib/errors.yaml#/InternalServerError"
+
+components:
+  schemas:
+    JWKS:
+      type: object
+      required: [keys]
+      properties:
+        keys:
+          type: array
+          items:
+            $ref: "#/components/schemas/JWK"
+
+    # JWK:
+    #   type: object
+    #   required: [kty, alg, kid, crv, x]
+    #   properties:
+    #     kty:
+    #       type: string
+    #       enum: [OKP]
+    #       description: Key type. OKP for Ed25519.
+    #     alg:
+    #       type: string
+    #       enum: [EdDSA]
+    #     kid:
+    #       type: string
+    #     crv:
+    #       type: string
+    #       enum: [Ed25519]
+    #     x:
+    #       type: string
+    #       description: Base64url-encoded public key.
+
+    JWK:
+      oneOf:
+        - $ref: "#/components/schemas/JWKOkp"
+        - $ref: "#/components/schemas/JWKEc"
+        - $ref: "#/components/schemas/JWKRsa"
+      discriminator:
+        propertyName: kty
+        mapping:
+          OKP: "#/components/schemas/JWKOkp"
+          EC: "#/components/schemas/JWKEc"
+          RSA: "#/components/schemas/JWKRsa"
+
+    JWKOkp:
+      type: object
+      required: [kty, alg, kid, crv, x]
+      properties:
+        kty:
+          type: string
+          enum: [OKP]
+        alg:
+          type: string
+          enum: [EdDSA]
+        kid:
+          type: string
+        crv:
+          type: string
+          enum: [Ed25519, Ed448]
+        x:
+          type: string
+
+    JWKEc:
+      type: object
+      required: [kty, alg, kid, crv, x, y]
+      properties:
+        kty:
+          type: string
+          enum: [EC]
+        alg:
+          type: string
+          enum: [ES256, ES384, ES512]
+        kid:
+          type: string
+        crv:
+          type: string
+          enum: [P-256, P-384, P-521]
+        x:
+          type: string
+        y:
+          type: string
+
+    JWKRsa:
+      type: object
+      required: [kty, alg, kid, n, e]
+      properties:
+        kty:
+          type: string
+          enum: [RSA]
+        alg:
+          type: string
+          enum: [RS256, RS384, RS512, PS256, PS384, PS512]
+        kid:
+          type: string
+        n:
+          type: string
+        e:
+          type: string

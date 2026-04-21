@@ -1,17 +1,28 @@
 package password
 
 import (
-	"errors"
 	"fmt"
 	"unicode"
+
+	"github.com/rizesql/mithras/internal/errkit"
 )
 
 const (
 	minLength = 8
 )
 
-var ErrWeak = errors.New("password does not meet complexity requirements")
-var ErrTooShort = fmt.Errorf("password is too short; minimum length is %d characters", minLength)
+var (
+	ErrWeak = errkit.New("password does not meet complexity requirements",
+		errkit.WithCode(errkit.User.Request.Code("invalid_password")),
+		errkit.Internal("password complexity validation failed"),
+		errkit.Public("Password must contain at least one uppercase, one lowercase, one digit, and one special character."),
+	)
+	ErrTooShort = errkit.New(fmt.Sprintf("password is too short; minimum length is %d characters", minLength),
+		errkit.WithCode(errkit.User.Request.Code("invalid_password")),
+		errkit.Internal("password length validation failed"),
+		errkit.Publicf("Password is too short; minimum length is %d characters.", minLength),
+	)
+)
 
 type Raw struct {
 	value string
@@ -39,7 +50,7 @@ func New(raw string) (Raw, error) {
 	}
 
 	if !hasUpper || !hasLower || !hasDigit || !hasSpecial {
-		return Raw{}, errors.New("password must contain at least one uppercase, one lowercase, one digit, and one special character")
+		return Raw{}, ErrWeak
 	}
 
 	return Raw{value: raw}, nil
