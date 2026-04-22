@@ -35,22 +35,59 @@ func Register(srv *httpkit.Server, plt *platform.Platform) {
 		ratelimit.WithFailOpen(),
 	))
 
-	htmlMw := []httpkit.Middleware{withPanicRecovery, withTimeout, withRateLimit}
+	srv.RegisterRoute(oas.New(),
+		withPanicRecovery,
+		withTimeout,
+		withRateLimit,
+		jwks.RateLimit(plt),
+	)
+	srv.RegisterRoute(jwks.New(plt),
+		withPanicRecovery,
+		withTimeout,
+		withRateLimit,
+		jwks.RateLimit(plt),
+	)
 
-	apiMw := make([]httpkit.Middleware, 0, len(htmlMw)+1)
-	apiMw = append(apiMw, htmlMw...)
-	apiMw = append(apiMw, withValidation)
+	srv.RegisterRoute(authorize.New(plt),
+		withPanicRecovery,
+		withTimeout,
+		withRateLimit,
+	)
+	srv.RegisterRoute(token.New(plt),
+		withPanicRecovery,
+		withTimeout,
+		withRateLimit,
+		withValidation,
+	)
 
-	srv.RegisterRoute(oas.New(), append(apiMw, jwks.RateLimit(plt))...)
-	srv.RegisterRoute(jwks.New(plt), append(apiMw, jwks.RateLimit(plt))...)
-
-	srv.RegisterRoute(authorize.New(plt), htmlMw...)
-	srv.RegisterRoute(token.New(plt), apiMw...)
-
-	srv.RegisterRoute(login.New(plt), append(apiMw, login.RateLimit(plt))...)
-	srv.RegisterRoute(register.New(plt), append(apiMw, register.RateLimit(plt))...)
-	srv.RegisterRoute(forgotpassword.New(plt), append(apiMw, forgotpassword.RateLimit(plt))...)
-	srv.RegisterRoute(resetpassword.New(plt), append(apiMw, resetpassword.RateLimit(plt))...)
+	srv.RegisterRoute(login.New(plt),
+		withPanicRecovery,
+		withTimeout,
+		withRateLimit,
+		login.RateLimit(plt),
+		withValidation,
+	)
+	srv.RegisterRoute(register.New(plt),
+		withPanicRecovery,
+		withTimeout,
+		withRateLimit,
+		register.RateLimit(plt),
+		withValidation,
+	)
+	srv.RegisterRoute(forgotpassword.New(plt),
+		withPanicRecovery,
+		withTimeout,
+		withRateLimit,
+		forgotpassword.RateLimit(plt),
+		withValidation,
+	)
+	srv.RegisterRoute(resetpassword.New(plt),
+		withPanicRecovery,
+		withTimeout,
+		withRateLimit,
+		resetpassword.RateLimit(plt),
+		withValidation,
+	)
 
 	srv.RegisterRoute(static.New(), withPanicRecovery, withTimeout)
 	srv.RegisterRoute(openapi.New(), withPanicRecovery, withTimeout)

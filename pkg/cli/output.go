@@ -25,7 +25,7 @@ var (
 	errorColor   = color.New(color.FgRed)
 	warnColor    = color.New(color.FgYellow)
 	infoColor    = color.New(color.FgBlue)
-	subtleColor  = color.New(color.FgHiBlack)
+	subtleColor  = color.New(color.FgWhite)
 	headerColor  = color.New(color.FgBlue, color.Bold)
 	labelColor   = color.New(color.FgCyan)
 	pathColor    = color.New(color.FgWhite)
