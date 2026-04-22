@@ -23,7 +23,7 @@ jobs:
       - uses: ./.github/actions/setup-nix
 
       - name: GolangCI-lint
-        run: nix develop --command golangci-lint run ./...
+        run: nix develop --command golangci-lint run --build-tags=dev ./...
 
   format:
     runs-on: ubuntu-latest
@@ -49,7 +49,7 @@ jobs:
       - uses: ./.github/actions/setup-nix
 
       - name: Run Standard Tests
-        run: nix develop --command go test -v ./...
+        run: nix develop --command go test -tags=dev -v ./...
 
   test-race:
     runs-on: ubuntu-latest
@@ -58,4 +58,4 @@ jobs:
       - uses: ./.github/actions/setup-nix
 
       - name: Run Race Detector
-        run: nix develop --command go test -race -v -short ./...
+        run: nix develop --command go test -tags=dev -race -v -short ./...
