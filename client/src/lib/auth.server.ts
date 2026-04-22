@@ -12,17 +12,17 @@ export function createAuthClient(event: RequestEvent) {
 export function setTokens(event: RequestEvent, access: string, refresh: string) {
   event.cookies.set("refresh_token", refresh, {
     httpOnly: true,
-    sameSite: "lax",
+    sameSite: "strict",
     path: "/",
     maxAge: 34560000,
-    secure: false,
+    secure: true,
   });
 
   event.cookies.set("access_token", access, {
     httpOnly: true,
-    sameSite: "lax",
+    sameSite: "strict",
     path: "/",
     maxAge: 34560000,
-    secure: false,
+    secure: true,
   });
 }
