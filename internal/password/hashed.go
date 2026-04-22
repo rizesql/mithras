@@ -36,6 +36,8 @@ var phcPrefix = fmt.Sprintf(
 
 // dummyHash is used for timing attack mitigation. It matches the Argon2id parameters
 // used by this package (m=64MB, t=2, p=2).
+//
+//nolint:lll
 const dummyHash = "$argon2id$v=19$m=65536,t=2,p=2$ZHVtbXktc2FsdC0xNi1ieQ$dGhpcy1pcy1hLWR1bW15LTMyLWJ5dGUtaGFzaC0hISEh"
 
 type Hashed struct {
@@ -91,6 +93,7 @@ func (h Hashed) Verify(raw Raw) (bool, error) {
 		dec.time,
 		dec.memory,
 		dec.threads,
+		// #nosec G115
 		uint32(len(dec.hash)),
 	)
 

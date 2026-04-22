@@ -14,6 +14,7 @@ var (
 	errMissingAuthState = errkit.New("missing authorization state",
 		errkit.User.Request.Code("missing_auth_state"),
 		errkit.Internal("no Auth-State cookie found; user likely hit /register directly"),
+		//nolint:lll
 		errkit.Public("Your session has expired or the authorization request was invalid. Please try logging in from your application again."),
 	)
 )

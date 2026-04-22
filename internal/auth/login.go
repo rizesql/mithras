@@ -3,6 +3,7 @@ package auth
 import (
 	"context"
 	"net/netip"
+	"time"
 
 	"go.opentelemetry.io/otel/attribute"
 
@@ -43,17 +44,38 @@ func (l Login) Authenticate(
 	ctx, span := telemetry.Start(ctx, "auth.Authenticate")
 	defer telemetry.End(span, &err)
 
-	addr, err := email.Parse(rawEmail)
+	addr, pwd, err := parseCredentials(rawEmail, rawPassword)
 	if err != nil {
 		return db.GetUserWithPasswordRow{}, err
 	}
 
-	pwd, err := password.New(rawPassword)
+	usr, err = l.fetchUser(ctx, addr)
 	if err != nil {
 		return db.GetUserWithPasswordRow{}, err
 	}
 
-	usr, err = db.Query.GetUserWithPassword(ctx, l.db, addr)
+	now := l.clk.Now()
+	if err := checkUserStatus(usr.Status, usr.LockedUntil, now); err != nil {
+		return db.GetUserWithPasswordRow{}, err
+	}
+
+	ok, err := verifyPassword(ctx, usr.Secret, pwd)
+	if err != nil {
+		return db.GetUserWithPasswordRow{}, errPasswordVerificationFailed(err)
+	}
+
+	if !ok {
+		return db.GetUserWithPasswordRow{}, l.handleLoginFailure(ctx, usr, now)
+	}
+
+	return usr, nil
+}
+
+func (l Login) fetchUser(
+	ctx context.Context,
+	addr email.Address,
+) (db.GetUserWithPasswordRow, error) {
+	usr, err := db.Query.GetUserWithPassword(ctx, l.db, addr)
 	if err != nil {
 		if db.IsNotFound(err) {
 			return db.GetUserWithPasswordRow{}, errInvalidCredentials
@@ -61,35 +83,33 @@ func (l Login) Authenticate(
 		return db.GetUserWithPasswordRow{}, errSessionLookupFailed(err)
 	}
 
-	now := l.clk.Now()
-
-	if usr.Status == db.UserStatusSuspended {
-		return db.GetUserWithPasswordRow{}, errAccountSuspended
-	}
-
-	if usr.Status == db.UserStatusLocked && usr.LockedUntil != nil && usr.LockedUntil.After(now) {
-		return db.GetUserWithPasswordRow{}, errAccountLocked(usr.LockedUntil.String())
-	}
-	ok, err := verifyPassword(ctx, usr.Secret, pwd)
-	if err != nil {
-		return db.GetUserWithPasswordRow{}, errPasswordVerificationFailed(err)
-	}
-
-	if !ok {
-		_ = db.Query.RecordLoginFailure(ctx, l.db, usr.Pk)
-
-		if int(usr.FailedAttempts)+1 >= l.cfg.MaxFailedAttempts {
-			lockedUntil := now.Add(l.cfg.LockoutDuration)
-			_ = db.Query.LockAccount(ctx, l.db, db.LockAccountParams{
-				UserPk:      usr.Pk,
-				LockedUntil: &lockedUntil,
-			})
-		}
-
-		return db.GetUserWithPasswordRow{}, errInvalidCredentials
-	}
-
 	return usr, nil
+}
+
+func (l Login) handleLoginFailure(
+	ctx context.Context,
+	usr db.GetUserWithPasswordRow,
+	now time.Time,
+) error {
+	if err := db.Query.RecordLoginFailure(ctx, l.db, usr.Pk); err != nil {
+		telemetry.Event(ctx, "auth.record_login_failure_failed",
+			attribute.String("error", err.Error()),
+		)
+	}
+
+	if int(usr.FailedAttempts)+1 >= l.cfg.MaxFailedAttempts {
+		lockedUntil := now.Add(l.cfg.LockoutDuration)
+		if err := db.Query.LockAccount(ctx, l.db, db.LockAccountParams{
+			UserPk:      usr.Pk,
+			LockedUntil: &lockedUntil,
+		}); err != nil {
+			telemetry.Event(ctx, "auth.lock_account_failed",
+				attribute.String("error", err.Error()),
+			)
+		}
+	}
+
+	return errInvalidCredentials
 }
 
 func (l Login) CreateSession(
@@ -170,7 +190,11 @@ func (l Login) Login(
 		return nil, err
 	}
 
-	_ = db.Query.RecordLoginSuccess(ctx, l.db, usr.Pk)
+	if err := db.Query.RecordLoginSuccess(ctx, l.db, usr.Pk); err != nil {
+		telemetry.Event(ctx, "auth.record_login_success_failed",
+			attribute.String("error", err.Error()),
+		)
+	}
 
 	return l.CreateSession(ctx, usr.Pk, usr.ID, userAgent, ipAddr)
 }

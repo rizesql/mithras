@@ -49,9 +49,15 @@ func Flags() *pflag.FlagSet {
 	f := pflag.NewFlagSet("ratelimit", pflag.ExitOnError)
 	cfg := DefaultConfig()
 
-	f.String("ratelimit.type", string(cfg.Type), "Backend type for rate limiting (redis, memory, noop)")
-	f.String("ratelimit.redis.url", cfg.Redis.URL, "Redis server URL for rate limiting")
-	f.Duration("ratelimit.memory.cleanup_interval", cfg.Memory.CleanupInterval, "Interval to clean up expired in-memory rate limits")
+	f.String("ratelimit.type", string(cfg.Type),
+		"Backend type for rate limiting (redis, memory, noop)",
+	)
+	f.String("ratelimit.redis.url", cfg.Redis.URL,
+		"Redis server URL for rate limiting",
+	)
+	f.Duration("ratelimit.memory.cleanup_interval", cfg.Memory.CleanupInterval,
+		"Interval to clean up expired in-memory rate limits",
+	)
 
 	return f
 }

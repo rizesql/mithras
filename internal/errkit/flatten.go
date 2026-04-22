@@ -1,6 +1,7 @@
 package errkit
 
 import (
+	"errors"
 	"iter"
 )
 
@@ -19,7 +20,7 @@ func walkImpl(err error, yield func(error) bool) bool {
 		return false
 	}
 
-	switch unwrapper := err.(type) {
+	switch unwrapper := any(err).(type) {
 	case interface{ Unwrap() []error }:
 		for _, e := range unwrapper.Unwrap() {
 			if !walkImpl(e, yield) {
@@ -46,20 +47,24 @@ func Flatten(err error) FlatError {
 	var f FlatError
 
 	for curr := range walk(err) {
-		if re, ok := curr.(*richError); ok {
-			if re.public != "" {
-				f.Public = append(f.Public, re.public)
+		re, ok := errors.AsType[*richError](curr)
+		if !ok {
+			if f.Root == nil {
+				f.Root = curr
 			}
+			continue
+		}
 
-			if re.internal != "" {
-				f.Internal = append(f.Internal, re.internal)
-			}
+		if re.public != "" {
+			f.Public = append(f.Public, re.public)
+		}
 
-			if f.Code.IsZero() && !re.code.IsZero() {
-				f.Code = re.code
-			}
-		} else if f.Root == nil {
-			f.Root = curr
+		if re.internal != "" {
+			f.Internal = append(f.Internal, re.internal)
+		}
+
+		if f.Code.IsZero() && !re.code.IsZero() {
+			f.Code = re.code
 		}
 	}
 

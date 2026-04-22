@@ -48,8 +48,12 @@ func Flags() *pflag.FlagSet {
 	f := pflag.NewFlagSet("", pflag.ExitOnError)
 
 	cfg := DefaultConfig()
-	f.String("issuer", cfg.Issuer, "Issuer URL to use for JWTs and well-known endpoints")
-	f.String("http_port", cfg.HTTPPort, "HTTP port to listen on")
+	f.String("issuer", cfg.Issuer,
+		"Issuer URL to use for JWTs and well-known endpoints",
+	)
+	f.String("http_port", cfg.HTTPPort,
+		"HTTP port to listen on",
+	)
 	f.AddFlagSet(httpkit.Flags())
 	f.AddFlagSet(telemetry.LogsFlags())
 	f.AddFlagSet(telemetry.TracingFlags())

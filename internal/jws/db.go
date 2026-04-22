@@ -12,6 +12,7 @@ import (
 	"github.com/rizesql/mithras/pkg/db"
 	"github.com/rizesql/mithras/pkg/idkit"
 	"github.com/rizesql/mithras/pkg/telemetry"
+	"github.com/rizesql/mithras/pkg/telemetry/logger"
 )
 
 const (
@@ -81,48 +82,15 @@ func (s *DBStore) sync(ctx context.Context) (err error) {
 	defer telemetry.End(span, &err)
 
 	now := time.Now()
-
-	if err = db.Query.PruneJWS(ctx, s.db, now); err != nil {
-		_ = telemetry.Err(ctx, fmt.Errorf("prune failed: %w", err))
-	}
+	s.prune(ctx, now)
 
 	rows, err := db.Query.GetActiveJWSKeys(ctx, s.db, now)
 	if err != nil {
 		return fmt.Errorf("fetch active keys: %w", err)
 	}
 
-	active := make([]Key, 0, len(rows))
-	for _, row := range rows {
-		raw, err := s.enc.Decrypt(row.Data)
-		if err != nil {
-			_ = telemetry.Err(ctx, fmt.Errorf("decrypt failed for key %s: %w", row.ID, err))
-			continue
-		}
-
-		signer, err := s.codec.Decode(raw)
-		if err != nil {
-			_ = telemetry.Err(ctx, fmt.Errorf("decode failed for key %s: %w", row.ID, err))
-			continue
-		}
-
-		active = append(active, Key{
-			ID:        row.ID,
-			Signer:    signer,
-			Alg:       s.codec.Alg(),
-			RotatesAt: row.RotatesAt,
-			ExpiresAt: row.ExpiresAt,
-		})
-	}
-
-	var signing Key
-
-	for _, k := range active {
-		if k.RotatesAt.After(now) {
-			if signing.Signer == nil || k.RotatesAt.After(signing.RotatesAt) {
-				signing = k
-			}
-		}
-	}
+	active := s.processActiveKeys(ctx, rows)
+	signing := s.selectSigningKey(active, now)
 
 	telemetry.Attr(ctx, attribute.Int("jws.active_keys_count", len(active)))
 
@@ -138,12 +106,72 @@ func (s *DBStore) sync(ctx context.Context) (err error) {
 	return nil
 }
 
+func (s *DBStore) prune(ctx context.Context, now time.Time) {
+	if err := db.Query.PruneJWS(ctx, s.db, now); err != nil {
+		logger.Error("jws.sync.prune_failed",
+			"error", telemetry.Err(ctx, fmt.Errorf("prune failed: %w", err)),
+		)
+	}
+}
+
+func (s *DBStore) processActiveKeys(ctx context.Context, rows []db.GetActiveJWSKeysRow) []Key {
+	active := make([]Key, 0, len(rows))
+	for _, row := range rows {
+		key, ok := s.processKeyRow(ctx, row)
+		if ok {
+			active = append(active, key)
+		}
+	}
+	return active
+}
+
+func (s *DBStore) processKeyRow(ctx context.Context, row db.GetActiveJWSKeysRow) (Key, bool) {
+	raw, err := s.enc.Decrypt(row.Data)
+	if err != nil {
+		logger.Error("jws.sync.decrypt_failed",
+			"key_id", row.ID,
+			"error", telemetry.Err(ctx, fmt.Errorf("decrypt failed for key %s: %w", row.ID, err)),
+		)
+		return Key{}, false
+	}
+
+	signer, err := s.codec.Decode(raw)
+	if err != nil {
+		logger.Error("jws.sync.decode_failed",
+			"key_id", row.ID,
+			"error", telemetry.Err(ctx, fmt.Errorf("decode failed for key %s: %w", row.ID, err)),
+		)
+		return Key{}, false
+	}
+
+	return Key{
+		ID:        row.ID,
+		Signer:    signer,
+		Alg:       s.codec.Alg(),
+		RotatesAt: row.RotatesAt,
+		ExpiresAt: row.ExpiresAt,
+	}, true
+}
+
+func (s *DBStore) selectSigningKey(active []Key, now time.Time) Key {
+	var signing Key
+	for _, k := range active {
+		if k.RotatesAt.After(now) {
+			if signing.Signer == nil || k.RotatesAt.After(signing.RotatesAt) {
+				signing = k
+			}
+		}
+	}
+	return signing
+}
+
 func (s *DBStore) rotate(ctx context.Context) (err error) {
 	ctx, span := telemetry.Start(ctx, "jws.rotate")
 	defer telemetry.End(span, &err)
 
 	s.mu.RLock()
-	needsRotation := s.signingKey.Signer == nil || time.Until(s.signingKey.RotatesAt) <= keyRotationLookahead
+	needsRotation := (s.signingKey.Signer == nil ||
+		time.Until(s.signingKey.RotatesAt) <= keyRotationLookahead)
 	s.mu.RUnlock()
 
 	if !needsRotation {
@@ -180,7 +208,9 @@ func (s *DBStore) rotate(ctx context.Context) (err error) {
 	// Best-effort sync. If the insert succeeded but sync fails, the background
 	// runSync loop will eventually pick it up. This prevents duplicated keys.
 	if syncErr := s.sync(ctx); syncErr != nil {
-		_ = telemetry.Err(ctx, fmt.Errorf("post-rotation sync failed: %w", syncErr))
+		logger.Error("jws.rotate.post_rotation_sync_failed",
+			"error", telemetry.Err(ctx, fmt.Errorf("post-rotation sync failed: %w", syncErr)),
+		)
 	}
 
 	return nil
@@ -194,29 +224,43 @@ func (s *DBStore) Sync(ctx context.Context) error {
 	defer ticker.Stop()
 
 	for {
-		if err := s.sync(ctx); err != nil {
-			_ = telemetry.Err(ctx, fmt.Errorf("background sync failed: %w", err))
-		} else {
-			s.mu.RLock()
-			hasSigning := s.signingKey.Signer != nil && s.signingKey.RotatesAt.After(time.Now())
-			s.mu.RUnlock()
-
-			if !hasSigning {
-				_ = telemetry.Err(ctx, errors.New("lost signing key, triggering emergency rotation"))
-				s.rotMu.Lock()
-
-				if rotateErr := s.rotate(ctx); rotateErr != nil {
-					_ = telemetry.Err(ctx, fmt.Errorf("emergency rotation failed: %w", rotateErr))
-				}
-				s.rotMu.Unlock()
-			}
-		}
+		s.performSyncCycle(ctx)
 
 		select {
 		case <-ctx.Done():
 			return nil
 		case <-ticker.C:
 		}
+	}
+}
+
+func (s *DBStore) performSyncCycle(ctx context.Context) {
+	if err := s.sync(ctx); err != nil {
+		logger.Error("jws.sync.background_sync_failed",
+			"error", telemetry.Err(ctx, fmt.Errorf("background sync failed: %w", err)),
+		)
+		return
+	}
+
+	s.mu.RLock()
+	hasSigning := s.signingKey.Signer != nil && s.signingKey.RotatesAt.After(time.Now())
+	s.mu.RUnlock()
+
+	if hasSigning {
+		return
+	}
+
+	logger.Error("jws.sync.lost_signing_key",
+		"error", telemetry.Err(ctx, errors.New("lost signing key, triggering emergency rotation")),
+	)
+
+	s.rotMu.Lock()
+	defer s.rotMu.Unlock()
+
+	if err := s.rotate(ctx); err != nil {
+		logger.Error("jws.sync.emergency_rotation_failed",
+			"error", telemetry.Err(ctx, fmt.Errorf("emergency rotation failed: %w", err)),
+		)
 	}
 }
 
@@ -235,7 +279,9 @@ func (s *DBStore) Rotate(ctx context.Context) error {
 			s.rotMu.Unlock()
 
 			if err != nil {
-				_ = telemetry.Err(ctx, fmt.Errorf("background rotation failed: %w", err))
+				logger.Error("jws.rotate.background_rotation_failed",
+					"error", telemetry.Err(ctx, fmt.Errorf("background rotation failed: %w", err)),
+				)
 
 				select {
 				case <-time.After(keyRotationBackoff):

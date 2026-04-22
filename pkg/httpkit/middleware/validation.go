@@ -2,6 +2,7 @@ package middleware
 
 import (
 	"context"
+	"errors"
 	"strings"
 
 	"go.opentelemetry.io/otel/attribute"
@@ -17,9 +18,10 @@ func WithValidation(v *validator.Validator) httpkit.Middleware {
 		return func(ctx context.Context, c *httpkit.Context) error {
 			if err := v.Validate(ctx, c.Req().Raw()); err != nil {
 				telemetry.Attr(ctx, attribute.Bool("validation.failed", true))
-				if valErrs, ok := err.(validator.ValidationErrors); ok {
+
+				if errs, ok := errors.AsType[validator.ValidationErrors](err); ok {
 					var b strings.Builder
-					for _, e := range valErrs {
+					for _, e := range errs {
 						b.WriteString(e.Path)
 						b.WriteByte(',')
 					}

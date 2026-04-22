@@ -27,10 +27,18 @@ func Flags() *pflag.FlagSet {
 	f := pflag.NewFlagSet("auth", pflag.ExitOnError)
 
 	cfg := DefaultConfig()
-	f.Duration("auth.access_token_duration", cfg.AccessTokenDuration, "duration of access token")
-	f.Duration("auth.refresh_token_duration", cfg.RefreshTokenDuration, "duration of refresh token")
-	f.Int("auth.max_failed_attempts", cfg.MaxFailedAttempts, "max failed login attempts before lockout")
-	f.Duration("auth.lockout_duration", cfg.LockoutDuration, "duration of account lockout")
+	f.Duration("auth.access_token_duration", cfg.AccessTokenDuration,
+		"duration of access token",
+	)
+	f.Duration("auth.refresh_token_duration", cfg.RefreshTokenDuration,
+		"duration of refresh token",
+	)
+	f.Int("auth.max_failed_attempts", cfg.MaxFailedAttempts,
+		"max failed login attempts before lockout",
+	)
+	f.Duration("auth.lockout_duration", cfg.LockoutDuration,
+		"duration of account lockout",
+	)
 	f.BytesBase64("auth.kek", nil, "key encryption key")
 
 	return f

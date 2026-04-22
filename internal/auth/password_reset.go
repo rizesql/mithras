@@ -77,6 +77,7 @@ func (r PasswordReset) Request(
 	}
 
 	// FOR TESTING: Log the reset token so it can be used without SMTP
+	//nolint:lll
 	fmt.Printf("\n--- [DEBUG] PASSWORD RESET TOKEN ---\nToken: %s.%s\n------------------------------------\n\n", id, secretStr)
 
 	// TODO: Send email
@@ -93,9 +94,26 @@ func (r PasswordReset) Reset(
 	ctx, span := telemetry.Start(ctx, "auth.PasswordReset.Reset")
 	defer telemetry.End(span, &err)
 
+	rst, err := r.validateToken(ctx, token)
+	if err != nil {
+		return err
+	}
+
+	newSecret, err := r.validateAndHashNewPassword(ctx, rst.UserPk, rawNewPassword)
+	if err != nil {
+		return err
+	}
+
+	return r.performReset(ctx, rst, newSecret)
+}
+
+func (r PasswordReset) validateToken(
+	ctx context.Context,
+	token string,
+) (db.PasswordResetGetActiveRow, error) {
 	parts := strings.Split(token, ".")
 	if len(parts) != 2 {
-		return errInvalidResetToken
+		return db.PasswordResetGetActiveRow{}, errInvalidResetToken
 	}
 
 	id := parts[0]
@@ -104,28 +122,48 @@ func (r PasswordReset) Reset(
 	rst, err := db.Query.PasswordResetGetActive(ctx, r.db, idkit.PasswordResetID(id))
 	if err != nil {
 		if db.IsNotFound(err) {
-			return errResetTokenNotFound
+			return db.PasswordResetGetActiveRow{}, errResetTokenNotFound
 		}
-		return errTokenLookupFailed(err)
+		return db.PasswordResetGetActiveRow{}, errTokenLookupFailed(err)
 	}
 
 	hash := sha256.Sum256([]byte(secretStr))
 	if subtle.ConstantTimeCompare(hash[:], rst.TokenHash) != 1 {
-		return errResetTokenSecretMismatch
+		return db.PasswordResetGetActiveRow{}, errResetTokenSecretMismatch
 	}
 
+	return rst, nil
+}
+
+func (r PasswordReset) validateAndHashNewPassword(
+	ctx context.Context,
+	userPk int64,
+	rawNewPassword string,
+) (*password.Hashed, error) {
 	pwd, err := password.New(rawNewPassword)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	newSecret, err := hashPassword(ctx, pwd)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
+	if err := r.checkPasswordHistory(ctx, userPk, pwd); err != nil {
+		return nil, err
+	}
+
+	return newSecret, nil
+}
+
+func (r PasswordReset) checkPasswordHistory(
+	ctx context.Context,
+	userPk int64,
+	pwd password.Raw,
+) error {
 	history, err := db.Query.GetRecentPasswordHashes(ctx, r.db, db.GetRecentPasswordHashesParams{
-		UserPk: rst.UserPk,
+		UserPk: userPk,
 		Limit:  5,
 	})
 	if err != nil {
@@ -142,37 +180,46 @@ func (r PasswordReset) Reset(
 		}
 	}
 
+	return nil
+}
+
+func (r PasswordReset) performReset(
+	ctx context.Context,
+	rst db.PasswordResetGetActiveRow,
+	newSecret *password.Hashed,
+) error {
 	now := r.clk.Now()
 
-	err = db.Tx(ctx, r.db, func(tx db.DBTX) error {
-		if err = db.Query.InsertPasswordHistory(ctx, tx, db.InsertPasswordHistoryParams{
+	err := db.Tx(ctx, r.db, func(tx db.DBTX) error {
+		if err := db.Query.InsertPasswordHistory(ctx, tx, db.InsertPasswordHistoryParams{
 			UserPk: rst.UserPk,
 			Secret: *newSecret,
 		}); err != nil {
 			return err
 		}
 
-		if err = db.Query.UpdateCredentialByUserId(ctx, tx, db.UpdateCredentialByUserIdParams{
+		if err := db.Query.UpdateCredentialByUserId(ctx, tx, db.UpdateCredentialByUserIdParams{
 			UserPk: rst.UserPk,
 			Secret: *newSecret,
 		}); err != nil {
 			return err
 		}
 
-		if err = db.Query.PasswordResetMarkUsed(ctx, tx, rst.Pk); err != nil {
+		if err := db.Query.PasswordResetMarkUsed(ctx, tx, rst.Pk); err != nil {
 			return err
 		}
 
-		if err = db.Query.PasswordResetInvalidateSiblings(ctx, tx, db.PasswordResetInvalidateSiblingsParams{
+		err := db.Query.PasswordResetInvalidateSiblings(ctx, tx, db.PasswordResetInvalidateSiblingsParams{
 			UserPk: rst.UserPk,
 			Pk:     rst.Pk,
-		}); err != nil {
+		})
+		if err != nil {
 			return err
 		}
 
-		if err = db.Query.RevokeUserSessions(ctx, tx, db.RevokeUserSessionsParams{
+		if err := db.Query.RevokeUserSessions(ctx, tx, db.RevokeUserSessionsParams{
 			UserPk: rst.UserPk,
-			Now:    new(now),
+			Now:    &now,
 		}); err != nil {
 			return err
 		}

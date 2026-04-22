@@ -302,6 +302,8 @@ func (h *SlogHandler) Enabled(_ context.Context, level slog.Level) bool {
 }
 
 // Handle rigidly formats and colorizes the slog.Record mapping natively to the UI.
+//
+//nolint:cyclop
 func (h *SlogHandler) Handle(_ context.Context, r slog.Record) error {
 	// Format the primary message explicitly based on severity level
 	switch r.Level {

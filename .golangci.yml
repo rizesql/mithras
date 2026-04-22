@@ -4,11 +4,19 @@ run:
   timeout: 5m
   tests: true
 
-output:
-  sort-results: true
+formatters:
+  enable:
+    - gofmt
+    - goimports
+
+  settings:
+    gofmt:
+      simplify: true
+
+    goimports:
+      local-prefixes: [github.com/aegis-run/aegis]
 
 linters:
-  disable-all: true
   enable:
     - govet
     - staticcheck
@@ -22,7 +30,6 @@ linters:
     - contextcheck
 
     - revive
-    - cyclop
     - funlen
     - nestif
     - dupl
@@ -79,12 +86,6 @@ linters:
       range-loops: true
       for-loops: true
 
-    gofmt:
-      simplify: true
-
-    goimports:
-      local-prefixes: github.com/aegis-run/aegis
-
     errcheck:
       check-type-assertions: true
       check-blank: true
@@ -103,7 +104,7 @@ linters:
       comparison: true
 
     wrapcheck:
-      ignoreSigs:
+      ignore-sigs:
         - .Errorf(
         - errors.New(
         - errors.Unwrap(
@@ -125,12 +126,3 @@ linters:
 issues:
   max-issues-per-linter: 0
   max-same-issues: 0
-  exclude-use-default: false
-
-formatters:
-  enable:
-    - gofmt
-    - goimports
-  settings:
-    goimports:
-      local-prefixes: github.com/rizesql/mithras

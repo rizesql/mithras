@@ -170,8 +170,7 @@ func (c *Context) Init(
 	c.Res().AddHeader("X-Request-Id", c.req.id)
 
 	if !readBody {
-		_ = r.Body.Close()
-		return nil
+		return r.Body.Close()
 	}
 
 	if maxBodySize > 0 {

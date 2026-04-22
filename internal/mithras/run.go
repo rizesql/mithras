@@ -37,32 +37,50 @@ func Run(ctx context.Context, cfg *config.Config) error {
 
 	logger.Info("mithras.starting")
 
+	plt, err := initPlatform(ctx, rt, cfg)
+	if err != nil {
+		return err
+	}
+
+	if err := startServer(ctx, rt, plt, cfg); err != nil {
+		return err
+	}
+
+	if err := rt.Run(ctx, runtime.WithTimeout(time.Minute)); err != nil {
+		logger.Error("runtime.shutdown_failed", "error", err)
+		return fmt.Errorf("graceful shutdown failed: %w", err)
+	}
+
+	logger.Info("mithras.stopped")
+
+	return nil
+}
+
+func initPlatform(
+	ctx context.Context,
+	rt *runtime.Runtime,
+	cfg *config.Config,
+) (*platform.Platform, error) {
 	clk := clock.System
 
 	valid, err := validator.New()
 	if err != nil {
-		return fmt.Errorf("unable to create validator: %w", err)
+		return nil, fmt.Errorf("unable to create validator: %w", err)
 	}
 
-	if err = datastore.CheckPendingMigrations(ctx, &cfg.DB); err != nil {
-		return fmt.Errorf("migrations pending (run 'mithras datastore migrate'): %w", err)
-	}
-
-	database, err := db.New(ctx, &cfg.DB)
+	database, err := initDatabase(ctx, rt, cfg)
 	if err != nil {
-		return fmt.Errorf("unable to create database: %w", err)
+		return nil, err
 	}
-
-	rt.Defer(database.Close)
 
 	rl, err := ratelimit.New(ctx, &cfg.RateLimit)
 	if err != nil {
-		return fmt.Errorf("unable to create rate limit store: %w", err)
+		return nil, fmt.Errorf("unable to create rate limit store: %w", err)
 	}
 
 	jwsStore, err := jws.NewDBStore(ctx, database, cfg.Auth.KEK, jws.EdDSA{})
 	if err != nil {
-		return fmt.Errorf("unable to initialize jws store: %w", err)
+		return nil, fmt.Errorf("unable to initialize jws store: %w", err)
 	}
 
 	rt.Go(jwsStore.Sync)
@@ -72,13 +90,39 @@ func Run(ctx context.Context, cfg *config.Config) error {
 
 	oauth2, err := auth.NewOAuth2(database, clk, cfg.Auth.KEK)
 	if err != nil {
-		return fmt.Errorf("unable to initialize oauth2: %w", err)
+		return nil, fmt.Errorf("unable to initialize oauth2: %w", err)
 	}
 
 	pr := auth.NewPasswordReset(database, clk)
 
-	plt := platform.New(valid, clk, database, rl, jwsStore, &issuer, cfg, oauth2, pr)
+	return platform.New(valid, clk, database, rl, jwsStore, &issuer, cfg, oauth2, pr), nil
+}
 
+func initDatabase(
+	ctx context.Context,
+	rt *runtime.Runtime,
+	cfg *config.Config,
+) (*db.Database, error) {
+	if err := datastore.CheckPendingMigrations(ctx, &cfg.DB); err != nil {
+		return nil, fmt.Errorf("migrations pending (run 'mithras datastore migrate'): %w", err)
+	}
+
+	database, err := db.New(ctx, &cfg.DB)
+	if err != nil {
+		return nil, fmt.Errorf("unable to create database: %w", err)
+	}
+
+	rt.Defer(database.Close)
+
+	return database, nil
+}
+
+func startServer(
+	ctx context.Context,
+	rt *runtime.Runtime,
+	plt *platform.Platform,
+	cfg *config.Config,
+) error {
 	srv := httpkit.New(httpkit.Dependencies{Clock: plt.Clock}, cfg.Server)
 	rt.RegisterHealth(srv.Mux())
 	rt.DeferFunc(srv.Shutdown)
@@ -100,13 +144,6 @@ func Run(ctx context.Context, cfg *config.Config) error {
 
 		return nil
 	})
-
-	if err := rt.Run(ctx, runtime.WithTimeout(time.Minute)); err != nil {
-		logger.Error("runtime.shutdown_failed", "error", err)
-		return fmt.Errorf("graceful shutdown failed: %w", err)
-	}
-
-	logger.Info("mithras.stopped")
 
 	return nil
 }

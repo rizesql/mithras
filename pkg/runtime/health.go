@@ -83,14 +83,11 @@ func (rt *Runtime) handleLive(w http.ResponseWriter, _ *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 
 	if rt.state == stateIdle {
-		w.WriteHeader(http.StatusServiceUnavailable)
-		_, _ = w.Write(respNotStarted)
-
+		rt.writeResponse(w, http.StatusServiceUnavailable, respNotStarted)
 		return
 	}
 
-	w.WriteHeader(http.StatusOK)
-	_, _ = w.Write(respOK)
+	rt.writeResponse(w, http.StatusOK, respOK)
 }
 
 // handleReady returns the readiness probe response.
@@ -99,16 +96,12 @@ func (rt *Runtime) handleReady(w http.ResponseWriter, req *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 
 	if rt.state == stateIdle {
-		w.WriteHeader(http.StatusServiceUnavailable)
-		_, _ = w.Write(respNotStarted)
-
+		rt.writeResponse(w, http.StatusServiceUnavailable, respNotStarted)
 		return
 	}
 
 	if rt.state == stateShuttingDown {
-		w.WriteHeader(http.StatusServiceUnavailable)
-		_, _ = w.Write(respShuttingDown)
-
+		rt.writeResponse(w, http.StatusServiceUnavailable, respShuttingDown)
 		return
 	}
 
@@ -118,14 +111,24 @@ func (rt *Runtime) handleReady(w http.ResponseWriter, req *http.Request) {
 	rt.health.mu.RUnlock()
 
 	if len(checks) == 0 {
-		w.WriteHeader(http.StatusOK)
-		_, _ = w.Write(respOK)
-
+		rt.writeResponse(w, http.StatusOK, respOK)
 		return
 	}
 
 	results := rt.runChecks(req.Context(), checks)
+	rt.writeCheckResults(w, results)
+}
 
+func (rt *Runtime) writeResponse(w http.ResponseWriter, status int, body []byte) {
+	w.WriteHeader(status)
+	if _, err := w.Write(body); err != nil {
+		logger.Error("runtime.health.write_failed",
+			"error", err,
+		)
+	}
+}
+
+func (rt *Runtime) writeCheckResults(w http.ResponseWriter, results []checkResult) {
 	response := struct {
 		Status string            `json:"status"`
 		Checks map[string]string `json:"checks"`
@@ -147,13 +150,16 @@ func (rt *Runtime) handleReady(w http.ResponseWriter, req *http.Request) {
 
 	if !allPassed {
 		response.Status = "fail"
-
 		w.WriteHeader(http.StatusServiceUnavailable)
 	} else {
 		w.WriteHeader(http.StatusOK)
 	}
 
-	_ = json.NewEncoder(w).Encode(response)
+	if err := json.NewEncoder(w).Encode(response); err != nil {
+		logger.Error("runtime.health.ready_encode_failed",
+			"error", err,
+		)
+	}
 }
 
 type checkResult struct {

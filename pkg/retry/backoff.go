@@ -18,7 +18,11 @@ func LinBackoff(delay time.Duration) BackoffFunc {
 	}
 }
 
-func ExpBackoff(init time.Duration, mult, randFactor float64, maxInterval time.Duration) BackoffFunc {
+func ExpBackoff(
+	init time.Duration,
+	mult, randFactor float64,
+	maxInterval time.Duration,
+) BackoffFunc {
 	return func(n int) time.Duration {
 		if n < 1 {
 			n = 1
@@ -28,7 +32,6 @@ func ExpBackoff(init time.Duration, mult, randFactor float64, maxInterval time.D
 		curr = math.Min(curr, float64(maxInterval))
 
 		delta := randFactor * curr
-		//nolint gosec
 		// #nosec G404
 		jitter := curr - delta + 2*delta*rand.Float64()
 

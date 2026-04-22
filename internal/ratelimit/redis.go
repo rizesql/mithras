@@ -100,25 +100,12 @@ func newRedis(ctx context.Context, cfg *RedisConfig) (*RedisStore, error) {
 var _ Store = (*RedisStore)(nil)
 
 func (s *RedisStore) Check(ctx context.Context, req *Request) (*Response, error) {
-	if req.Identifier == "" {
-		return nil, errors.New("ratelimit: empty identifier")
+	if err := s.validateRequest(req); err != nil {
+		return nil, err
 	}
 
-	if req.Limit <= 0 || req.Duration < time.Millisecond {
-		return nil, errors.New("ratelimit: invalid limit/duration")
-	}
-
-	burst := req.Burst
-	if burst <= 0 {
-		burst = req.Limit
-	}
-
-	now := req.Time
-	if now.IsZero() {
-		now = time.Now()
-	}
-
-	rate := float64(req.Limit) / float64(req.Duration.Milliseconds())
+	now := s.getCurrentTime(req)
+	rate, burst := s.calculateRateAndBurst(req)
 
 	res, err := allow.Run(ctx, s.rdb,
 		[]string{req.Key()},
@@ -129,23 +116,67 @@ func (s *RedisStore) Check(ctx context.Context, req *Request) (*Response, error)
 		return nil, fmt.Errorf("ratelimit: redis: %w", err)
 	}
 
-	arr := res.([]any)
+	return s.parseResponse(res, req.Limit, now)
+}
+
+func (s *RedisStore) validateRequest(req *Request) error {
+	if req.Identifier == "" {
+		return errors.New("ratelimit: empty identifier")
+	}
+
+	if req.Limit <= 0 || req.Duration < time.Millisecond {
+		return errors.New("ratelimit: invalid limit/duration")
+	}
+
+	return nil
+}
+
+func (s *RedisStore) getCurrentTime(req *Request) time.Time {
+	if req.Time.IsZero() {
+		return time.Now()
+	}
+
+	return req.Time
+}
+
+func (s *RedisStore) calculateRateAndBurst(req *Request) (float64, int64) {
+	burst := req.Burst
+	if burst <= 0 {
+		burst = req.Limit
+	}
+
+	rate := float64(req.Limit) / float64(req.Duration.Milliseconds())
+
+	return rate, burst
+}
+
+func (s *RedisStore) parseResponse(res any, limit int64, now time.Time) (*Response, error) {
+	arr, ok := res.([]any)
+	if !ok || len(arr) < 3 {
+		return nil, fmt.Errorf("ratelimit: redis: unexpected result type or length: %T", res)
+	}
+
+	allowed, ok1 := arr[0].(int64)
+	retryMs, ok2 := arr[1].(int64)
+	remaining, ok3 := arr[2].(int64)
+
+	if !ok1 || !ok2 || !ok3 {
+		return nil, fmt.Errorf("ratelimit: redis: unexpected result element types")
+	}
 
 	var reset time.Time
-	allowed := arr[0].(int64) == 1
-	retryMs := arr[1].(int64)
-	remaining := arr[2].(int64)
+	isAllowed := allowed == 1
 
-	if !allowed {
+	if !isAllowed {
 		reset = now.Add(time.Duration(retryMs) * time.Millisecond)
 	}
 
 	return &Response{
-		Limit:     req.Limit,
+		Limit:     limit,
 		Remaining: max(remaining, 0),
 		Reset:     reset,
-		Success:   allowed,
-		Used:      req.Limit - remaining,
+		Success:   isAllowed,
+		Used:      limit - remaining,
 	}, nil
 }
 

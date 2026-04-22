@@ -47,7 +47,9 @@ var (
 	errInvalidRedirectURIDomain = func(host, requestHost string) error {
 		return errkit.New("invalid redirect uri domain",
 			errkit.User.Request.Code("invalid_redirect_uri_domain"),
-			errkit.Internal(fmt.Sprintf("redirect_uri host %q does not match request host %q", host, requestHost)),
+			errkit.Internal(
+				fmt.Sprintf("redirect_uri host %q does not match request host %q", host, requestHost),
+			),
 			errkit.Public("The redirect_uri domain is not allowed."),
 		)
 	}

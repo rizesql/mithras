@@ -57,9 +57,8 @@ func (l *Logout) Logout(ctx context.Context, rawToken string) (err error) {
 		})
 		if revErr != nil {
 			telemetry.Event(ctx, "auth.replay_revocation_failed",
-				attribute.String("error", revErr.Error()),
+				attribute.String("error", telemetry.Err(ctx, revErr).Error()),
 			)
-			telemetry.Err(ctx, revErr)
 		}
 
 		return errInvalidLogoutToken("token was previously revoked; anomaly detected")
@@ -75,9 +74,8 @@ func (l *Logout) Logout(ctx context.Context, rawToken string) (err error) {
 			attribute.String("session.id", sess.ID.String()),
 			attribute.String("user.id", sess.UserID.String()),
 		)
-		telemetry.Err(ctx, revErr)
 
-		return errLogoutSessionRevocationFailed(revErr)
+		return errLogoutSessionRevocationFailed(telemetry.Err(ctx, revErr))
 	}
 
 	telemetry.Event(ctx, "auth.logout_success",

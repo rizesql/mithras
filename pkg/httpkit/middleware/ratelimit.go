@@ -16,7 +16,7 @@ import (
 	"github.com/rizesql/mithras/pkg/telemetry/logger"
 )
 
-func WithRateLimit(policies ...ratelimit.Policy) httpkit.Middleware {
+func registerPolicies(policies ...ratelimit.Policy) []ratelimit.Policy {
 	for _, p := range policies {
 		if p.Store == nil {
 			panic(fmt.Sprintf("ratelimit: policy %q has a nil Store", p.Name))
@@ -28,6 +28,12 @@ func WithRateLimit(policies ...ratelimit.Policy) httpkit.Middleware {
 		p.Store = ratelimit.WithTelemetry(p.Store, p.Name)
 		wrapped[i] = p
 	}
+
+	return wrapped
+}
+
+func WithRateLimit(policies ...ratelimit.Policy) httpkit.Middleware {
+	wrapped := registerPolicies(policies...)
 
 	return func(next httpkit.HandleFunc) httpkit.HandleFunc {
 		return func(ctx context.Context, cx *httpkit.Context) error {
@@ -78,7 +84,6 @@ func WithRateLimit(policies ...ratelimit.Policy) httpkit.Middleware {
 					)
 
 					setHeaders(cx, res)
-
 					return errkit.New("",
 						errkit.User.RateLimit.Code(pol.Name),
 						errkit.Internal(fmt.Sprintf("rate limit exceeded for policy %q", pol.Name)),
@@ -89,7 +94,6 @@ func WithRateLimit(policies ...ratelimit.Policy) httpkit.Middleware {
 
 			if mostRestrictive != nil {
 				setHeaders(cx, mostRestrictive)
-
 				telemetry.Attr(ctx,
 					attribute.String("ratelimit.policy", restrictivePolicy),
 					attribute.Int64("ratelimit.remaining", mostRestrictive.Remaining),
@@ -118,7 +122,10 @@ func RetryAfterSeconds(header http.Header) int {
 	if v == "" {
 		return 0
 	}
-	n, _ := strconv.Atoi(v)
+	n, err := strconv.Atoi(v)
+	if err != nil {
+		return 0
+	}
 
 	return n
 }

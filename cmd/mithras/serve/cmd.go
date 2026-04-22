@@ -4,10 +4,11 @@ package serve
 import (
 	"fmt"
 
-	"github.com/rizesql/mithras/internal/mithras"
-	"github.com/rizesql/mithras/internal/mithras/config"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
+
+	"github.com/rizesql/mithras/internal/mithras"
+	"github.com/rizesql/mithras/internal/mithras/config"
 )
 
 // Command returns the serve command for the Mithras service.

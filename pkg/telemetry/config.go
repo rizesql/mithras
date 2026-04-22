@@ -52,13 +52,27 @@ func TracingFlags() *pflag.FlagSet {
 	f := pflag.NewFlagSet("tracing", pflag.ContinueOnError)
 
 	cfg := DefaultTracingConfig()
-	f.Bool("tracing.enabled", cfg.Enabled, "Enable distributed tracing")
-	f.String("tracing.exporter", cfg.Exporter, "Tracer exporter (otlp, none)")
-	f.String("tracing.endpoint", cfg.Endpoint, "Tracer OTLP endpoint")
-	f.Bool("tracing.insecure", cfg.Insecure, "Tracer exporter insecure (no TLS)")
-	f.String("tracing.url_path", cfg.URLPath, "Tracer exporter URL path")
-	f.StringToString("tracing.headers", cfg.Headers, "Tracer exporter headers")
-	f.String("tracing.protocol", string(cfg.Protocol), "Tracer exporter protocol (http, https)")
+	f.Bool("tracing.enabled", cfg.Enabled,
+		"Enable distributed tracing",
+	)
+	f.String("tracing.exporter", cfg.Exporter,
+		"Tracer exporter (otlp, none)",
+	)
+	f.String("tracing.endpoint", cfg.Endpoint,
+		"Tracer OTLP endpoint",
+	)
+	f.Bool("tracing.insecure", cfg.Insecure,
+		"Tracer exporter insecure (no TLS)",
+	)
+	f.String("tracing.url_path", cfg.URLPath,
+		"Tracer exporter URL path",
+	)
+	f.StringToString("tracing.headers", cfg.Headers,
+		"Tracer exporter headers",
+	)
+	f.String("tracing.protocol", string(cfg.Protocol),
+		"Tracer exporter protocol (http, https)",
+	)
 
 	return f
 }
@@ -104,14 +118,30 @@ func MetricsFlags() *pflag.FlagSet {
 	f := pflag.NewFlagSet("metrics", pflag.ContinueOnError)
 
 	cfg := DefaultMetricsConfig()
-	f.Bool("metrics.enabled", cfg.Enabled, "Enable metrics collection")
-	f.String("metrics.exporter", cfg.Exporter, "Metrics exporter (otlp, none)")
-	f.String("metrics.endpoint", cfg.Endpoint, "Metrics OTLP endpoint")
-	f.Bool("metrics.insecure", cfg.Insecure, "Metrics exporter insecure (no TLS)")
-	f.String("metrics.url_path", cfg.URLPath, "Metrics exporter URL path")
-	f.StringToString("metrics.headers", cfg.Headers, "Metrics exporter headers")
-	f.String("metrics.protocol", string(cfg.Protocol), "Metrics exporter protocol (http, https)")
-	f.Duration("metrics.interval", cfg.Interval, "Metrics collection interval")
+	f.Bool("metrics.enabled", cfg.Enabled,
+		"Enable metrics collection",
+	)
+	f.String("metrics.exporter", cfg.Exporter,
+		"Metrics exporter (otlp, none)",
+	)
+	f.String("metrics.endpoint", cfg.Endpoint,
+		"Metrics OTLP endpoint",
+	)
+	f.Bool("metrics.insecure", cfg.Insecure,
+		"Metrics exporter insecure (no TLS)",
+	)
+	f.String("metrics.url_path", cfg.URLPath,
+		"Metrics exporter URL path",
+	)
+	f.StringToString("metrics.headers", cfg.Headers,
+		"Metrics exporter headers",
+	)
+	f.String("metrics.protocol", string(cfg.Protocol),
+		"Metrics exporter protocol (http, https)",
+	)
+	f.Duration("metrics.interval", cfg.Interval,
+		"Metrics collection interval",
+	)
 
 	return f
 }
@@ -186,9 +216,15 @@ func LogsFlags() *pflag.FlagSet {
 	f := pflag.NewFlagSet("logs", pflag.ContinueOnError)
 	cfg := DefaultLogsConfig()
 
-	f.Bool("logs.enabled", cfg.Enabled, "Enable structured logging")
-	f.String("logs.level", cfg.Level.String(), "Log level (debug, info, warn, error)")
-	f.String("logs.format", string(cfg.Format), "Log format (text, json)")
+	f.Bool("logs.enabled", cfg.Enabled,
+		"Enable structured logging",
+	)
+	f.String("logs.level", cfg.Level.String(),
+		"Log level (debug, info, warn, error)",
+	)
+	f.String("logs.format", string(cfg.Format),
+		"Log format (text, json)",
+	)
 
 	return f
 }

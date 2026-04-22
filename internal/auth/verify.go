@@ -46,12 +46,8 @@ func (v *Verifier) Verify(ctx context.Context, rawToken string) (db.User, error)
 		return db.User{}, errSessionRevoked
 	}
 
-	if sess.UserStatus == db.UserStatusSuspended {
-		return db.User{}, errAccountSuspended
-	}
-
-	if sess.UserStatus == db.UserStatusLocked && sess.UserLockedUntil != nil && sess.UserLockedUntil.After(now) {
-		return db.User{}, errAccountLocked(sess.UserLockedUntil.String())
+	if err := checkUserStatus(sess.UserStatus, sess.UserLockedUntil, now); err != nil {
+		return db.User{}, err
 	}
 
 	usr, err := db.Query.GetUserByPk(ctx, v.db, sess.UserPk)

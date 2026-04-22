@@ -15,9 +15,11 @@ var (
 	ErrWeak = errkit.New("password does not meet complexity requirements",
 		errkit.WithCode(errkit.User.Request.Code("invalid_password")),
 		errkit.Internal("password complexity validation failed"),
+		//nolint:lll
 		errkit.Public("Password must contain at least one uppercase, one lowercase, one digit, and one special character."),
 	)
-	ErrTooShort = errkit.New(fmt.Sprintf("password is too short; minimum length is %d characters", minLength),
+	ErrTooShort = errkit.New(
+		fmt.Sprintf("password is too short; minimum length is %d characters", minLength),
 		errkit.WithCode(errkit.User.Request.Code("invalid_password")),
 		errkit.Internal("password length validation failed"),
 		errkit.Publicf("Password is too short; minimum length is %d characters.", minLength),
@@ -35,6 +37,14 @@ func New(raw string) (Raw, error) {
 		return Raw{}, ErrTooShort
 	}
 
+	if !meetsComplexityRequirements(raw) {
+		return Raw{}, ErrWeak
+	}
+
+	return Raw{value: raw}, nil
+}
+
+func meetsComplexityRequirements(raw string) bool {
 	var hasUpper, hasLower, hasDigit, hasSpecial bool
 	for _, c := range raw {
 		switch {
@@ -49,9 +59,5 @@ func New(raw string) (Raw, error) {
 		}
 	}
 
-	if !hasUpper || !hasLower || !hasDigit || !hasSpecial {
-		return Raw{}, ErrWeak
-	}
-
-	return Raw{value: raw}, nil
+	return hasUpper && hasLower && hasDigit && hasSpecial
 }

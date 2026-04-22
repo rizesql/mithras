@@ -6,6 +6,7 @@ import (
 	"go.opentelemetry.io/otel/attribute"
 
 	"github.com/jackc/pgx/v5/pgtype"
+
 	"github.com/rizesql/mithras/internal/email"
 	"github.com/rizesql/mithras/internal/password"
 	"github.com/rizesql/mithras/internal/token"
@@ -30,6 +31,11 @@ type RegisterResult struct {
 	Session *LoginResponse
 }
 
+type txResult struct {
+	userPk int64
+	userID idkit.UserID
+}
+
 func (r Register) Register(
 	ctx context.Context,
 	name, rawEmail, rawPassword, userAgent, ipAddr string,
@@ -37,12 +43,7 @@ func (r Register) Register(
 	ctx, span := telemetry.Start(ctx, "auth.Register")
 	defer telemetry.End(span, &err)
 
-	addr, err := email.Parse(rawEmail)
-	if err != nil {
-		return nil, err
-	}
-
-	pwd, err := password.New(rawPassword)
+	addr, pwd, err := parseCredentials(rawEmail, rawPassword)
 	if err != nil {
 		return nil, err
 	}
@@ -52,12 +53,30 @@ func (r Register) Register(
 		return nil, errPasswordHashFailed(err)
 	}
 
-	type txResult struct {
-		userPk int64
-		userID idkit.UserID
+	result, err := r.createUser(ctx, name, addr, secret)
+	if err != nil {
+		return nil, err
 	}
 
-	result, err := db.TxWithResultRetry(ctx, r.db, func(tx db.DBTX) (txResult, error) {
+	sess, err := r.login.CreateSession(ctx, result.userPk, result.userID, userAgent, ipAddr)
+	if err != nil {
+		return &RegisterResult{UserID: result.userID}, nil
+	}
+
+	return &RegisterResult{
+		UserID:  result.userID,
+		UserPk:  result.userPk,
+		Session: sess,
+	}, nil
+}
+
+func (r Register) createUser(
+	ctx context.Context,
+	name string,
+	addr email.Address,
+	secret *password.Hashed,
+) (txResult, error) {
+	return db.TxWithResultRetry(ctx, r.db, func(tx db.DBTX) (txResult, error) {
 		userID := idkit.NewUserID()
 
 		userPk, err := db.Query.InsertUser(ctx, tx, db.InsertUserParams{
@@ -99,20 +118,6 @@ func (r Register) Register(
 
 		return txResult{userPk: userPk, userID: userID}, nil
 	})
-	if err != nil {
-		return nil, err
-	}
-
-	sess, err := r.login.CreateSession(ctx, result.userPk, result.userID, userAgent, ipAddr)
-	if err != nil {
-		return &RegisterResult{UserID: result.userID}, nil
-	}
-
-	return &RegisterResult{
-		UserID:  result.userID,
-		UserPk:  result.userPk,
-		Session: sess,
-	}, nil
 }
 
 func hashPassword(ctx context.Context, pwd password.Raw) (secret *password.Hashed, err error) {
