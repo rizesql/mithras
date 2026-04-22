@@ -47,7 +47,7 @@ fmt-check:
 # Run linter
 [group("development")]
 lint:
-    golangci-lint run ./...
+    golangci-lint run --build-tags=dev ./...
 
 # Run all checks (fmt + lint)
 [group("development")]
@@ -56,12 +56,12 @@ check: fmt-check lint
 # Run tests
 [group("development")]
 test *args:
-    go test ./... {{ args }}
+    go test -tags=dev ./... {{ args }}
 
 # Run tests with race detector
 [group("development")]
 test-race *args:
-    go test -race ./... {{ args }}
+    go test -tags=dev -race ./... {{ args }}
 
 # Generate all code (OpenAPI, SQL, etc)
 [group("development")]
@@ -110,7 +110,7 @@ vuln:
 # Run static application security testing
 [group("security")]
 sast:
-    go tool gosec -exclude-generated ./...
+    go tool gosec -exclude-generated -tags dev ./...
 
 # Run all security checks
 [group("security")]
