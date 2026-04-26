@@ -23,6 +23,8 @@ import (
 )
 
 // Register registers the HTTP routes for the Mithras service.
+//
+//nolint:funlen
 func Register(srv *httpkit.Server, plt *platform.Platform) {
 	withPanicRecovery := middleware.WithPanicRecovery()
 	withTimeout := middleware.WithTimeout(time.Minute)
