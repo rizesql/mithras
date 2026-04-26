@@ -37,7 +37,9 @@ func newClient(ctx context.Context, cfg *db.Config) (res *client, err error) {
 	success := false
 	defer func() {
 		if !success {
-			err = conn.Close()
+			if closeErr := conn.Close(); closeErr != nil {
+				err = fmt.Errorf("%w (failed to close connection: %w)", err, closeErr)
+			}
 		}
 	}()
 

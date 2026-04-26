@@ -65,3 +65,4 @@ dist-ssr
 # ref/
 _backup_*
 .svelte-kit/
+*.pdf

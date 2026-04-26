@@ -10,6 +10,7 @@ import (
 	forgotpassword "github.com/rizesql/mithras/internal/mithras/routes/forgot-password"
 	"github.com/rizesql/mithras/internal/mithras/routes/jwks"
 	"github.com/rizesql/mithras/internal/mithras/routes/login"
+	"github.com/rizesql/mithras/internal/mithras/routes/logout"
 	"github.com/rizesql/mithras/internal/mithras/routes/oas"
 	"github.com/rizesql/mithras/internal/mithras/routes/openapi"
 	"github.com/rizesql/mithras/internal/mithras/routes/register"
@@ -60,6 +61,13 @@ func Register(srv *httpkit.Server, plt *platform.Platform) {
 		withValidation,
 	)
 
+	srv.RegisterRoute(register.New(plt),
+		withPanicRecovery,
+		withTimeout,
+		withRateLimit,
+		register.RateLimit(plt),
+		withValidation,
+	)
 	srv.RegisterRoute(login.New(plt),
 		withPanicRecovery,
 		withTimeout,
@@ -67,11 +75,11 @@ func Register(srv *httpkit.Server, plt *platform.Platform) {
 		login.RateLimit(plt),
 		withValidation,
 	)
-	srv.RegisterRoute(register.New(plt),
+	srv.RegisterRoute(logout.New(plt),
 		withPanicRecovery,
 		withTimeout,
 		withRateLimit,
-		register.RateLimit(plt),
+		logout.RateLimit(plt),
 		withValidation,
 	)
 	srv.RegisterRoute(forgotpassword.New(plt),

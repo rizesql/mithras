@@ -2,6 +2,7 @@ package auth
 
 import (
 	"context"
+	"errors"
 	"net/netip"
 	"time"
 
@@ -50,18 +51,26 @@ func (l Login) Authenticate(
 	}
 
 	usr, err = l.fetchUser(ctx, addr)
-	if err != nil {
+	userNotFound := errors.Is(err, errInvalidCredentials)
+	if err != nil && !userNotFound {
 		return db.GetUserWithPasswordRow{}, err
 	}
 
 	now := l.clk.Now()
-	if err := checkUserStatus(usr.Status, usr.LockedUntil, now); err != nil {
-		return db.GetUserWithPasswordRow{}, err
+	statusErr := checkUserStatus(usr.Status, usr.LockedUntil, now)
+
+	ok, verifyErr := verifyPassword(ctx, usr.Secret, pwd)
+
+	if userNotFound {
+		return db.GetUserWithPasswordRow{}, errInvalidCredentials
 	}
 
-	ok, err := verifyPassword(ctx, usr.Secret, pwd)
-	if err != nil {
-		return db.GetUserWithPasswordRow{}, errPasswordVerificationFailed(err)
+	if statusErr != nil {
+		return db.GetUserWithPasswordRow{}, statusErr
+	}
+
+	if verifyErr != nil {
+		return db.GetUserWithPasswordRow{}, errPasswordVerificationFailed(verifyErr)
 	}
 
 	if !ok {

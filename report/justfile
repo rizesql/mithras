@@ -1,0 +1,2 @@
+run:
+    typst watch src/main.typ --root src

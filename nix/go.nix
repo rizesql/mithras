@@ -16,6 +16,7 @@
       goreleaser
       hl-log-viewer
       just
+      jq
     ];
 
     shellHook = ''
