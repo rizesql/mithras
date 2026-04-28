@@ -70,7 +70,4 @@ Rezultatul final al fluxului OAuth2 este emiterea unui token de acces în format
   ```
 ]
 
-// #figure(
-//   caption: [Captură JWKS - Cheile publice EdDSA pentru verificare asimetrică],
-//   // image("assets/03-implementation-jwks.png"),
-// ) [_(CAPTURA 10: `GET /jwks.json` — cheile publice EdDSA pentru verificare)_]
+

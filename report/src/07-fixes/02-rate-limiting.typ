@@ -16,7 +16,7 @@ de concurent creat de un atacator.
 === Politici Compuse și Fail-Closed
 
 Endpoint-urile critice, precum `/login` și `/register`, sunt protejate prin politici
-configurabile. Sistemul impune o limită globală per adresă IP (ex. 100 de cereri pe minut)
+configurabile. Sistemul impune o limită globală per adresă IP (ex. 1000 de cereri pe minut)
 pentru protecția împotriva abuzurilor DDoS, suplimentată de un mecanism de *Account Lockout*
 (blocarea temporală a contului după 5 încercări eșuate consecutive).
 

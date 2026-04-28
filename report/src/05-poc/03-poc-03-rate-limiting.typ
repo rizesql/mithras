@@ -24,6 +24,6 @@ modificări de proxy/IP.
 
 
 #figure(
-  caption: [TODO],
+  caption: [Demonstrația vulnerabilității VULN-03: Atac de tip forță brută reușit prin testarea secvențială fără blocare temporară.],
   image("assets/03-poc-03.png"),
 )

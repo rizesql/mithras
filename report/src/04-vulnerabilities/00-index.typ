@@ -1,6 +1,6 @@
 = Prezentare Vulnerabilități: OWASP Mapping
 
-Această secțiune detaliază arhitectura ofensivă a sistemului, analizând defecțiunile de
+Această secțiune detaliază profilul de vulnerabilitate al sistemului, analizând defecțiunile de
 proiectare și implementare introduse deliberat pe branch-ul `vulnerable` (versiunea V1).
 Obiectivul este de a demonstra cum o eroare structurală la nivel de cod conduce la o
 breșă exploatabilă în contextul mecanismelor de autentificare.

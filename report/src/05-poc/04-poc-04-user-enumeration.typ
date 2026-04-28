@@ -28,6 +28,6 @@ Diferența semantica expune atacatorului certitudinea existenței adresei de ema
 creând un recensământ detaliat al țintelor valide.
 
 #figure(
-  caption: [TODO],
+  caption: [Demonstrația vulnerabilității VULN-04: Răspunsuri HTTP și timp de procesare diferit pentru un cont existent față de un cont inexistent.],
   image("assets/04-poc-04.png"),
 )

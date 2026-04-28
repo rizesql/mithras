@@ -1,7 +1,7 @@
 == Infrastructură Docker Compose
 
 Serviciile de suport ale aplicației sunt gestionate prin Docker Compose, eliminând
-dependințele de sistem și garantând reproductibilitatea mediului. Fișierul
+dependențele de sistem și garantând reproductibilitatea mediului. Fișierul
 `docker-compose.yml` definește patru servicii, fiecare cu restricții explicite de
 resurse și politici `no-new-privileges`.
 

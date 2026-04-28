@@ -8,9 +8,9 @@ Prevenirea preluării abuzive a conturilor prin inferența mecanismelor de recup
 
 Pe versiunea securizată a sistemului, procesul de generare (`base64(email + unix_time)`)
 a fost șters. Tokenul de resetare este generat ca o secvență aleatoare de 32 de octeți,
-utilizând un generator de numere pseudo-aleatoare securizat criptografic (`crypto/rand`).
+utilizând un CSPRNG (Cryptographically Secure Random Number Generator) furnizat de `crypto/rand`.
 Această valoare asigură o entropie de 256 de biți, făcând atacurile de tip brute-force sau
-deducerea secretului computațional imposibile.
+deducerea secretului computațional infezabile.
 
 === Hashing Unidirecțional și Single-Use
 

@@ -37,6 +37,7 @@ cererilor:
 Endpoint-ul `/login` devine o țintă directă pentru scripturi de automatizare. Fără nicio
 penalizare temporală sau blocare la nivel de cont, un atacator poate rula un atac de
 dicționar exhaustiv. Aceasta transformă forța brută dintr-o procedură costisitoare într-una
-rapidă și asimptotic garantată de succes, limitată exclusiv de latența conexiunii la rețea
+rapidă și cu o probabilitate de succes crescătoare în funcție de dimensiunea dicționarului,
+limitată exclusiv de latența conexiunii la rețea
 și de resursele alocate serverului IdP. Această vulnerabilitate este exacerbată sever în
 combinație cu politica slabă de parole (VULN-01).

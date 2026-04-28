@@ -32,6 +32,6 @@ de token de resetare, iar serverul răspunde cu 200 OK. Parola este setată la
 `HackerOwned1!`, și preluarea de cont a reușit.
 
 #figure(
-  caption: [TODO],
+  caption: [Demonstrația vulnerabilității VULN-06: Previzionarea cu succes a token-ului de resetare bazat pe adresa de email și timestamp.],
   image("assets/06-poc-06.png"),
 )

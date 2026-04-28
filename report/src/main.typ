@@ -45,5 +45,7 @@
 #include "05-poc/00-index.typ"
 #include "06-impact/00-index.typ"
 #include "07-fixes/00-index.typ"
+#include "08-retest/00-index.typ"
+#include "09-audit/00-index.typ"
 #include "10-conclusions/00-index.typ"
 #include "11-bonus/00-index.typ"

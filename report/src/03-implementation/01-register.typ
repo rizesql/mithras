@@ -78,7 +78,7 @@ Stocarea datelor de înregistrare este realizată într-o singură tranzacție P
 pentru a preveni stările inconsistente. Pe lângă crearea profilului de bază, Mithras
 implementează două mecanisme critice pentru un sistem de autentificare comprehensiv. Primul
 mecanism vizează *Istoricul Parolelor*, unde hash-ul inițial este inserat și în
-tabelul `password_history`. Acest lucru permite impunerea unor politici viitoare
+tabelul `password_history`. Acest lucru permite impunerea politicilor
 de rotație, împiedicând utilizatorii să revină la parole utilizate anterior, chiar
 dacă acestea au fost sigure la momentul respectiv. Al doilea mecanism este
 *Atribuirea Rolurilor (RBAC)*, prin care fiecare utilizator este înregistrat

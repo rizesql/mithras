@@ -100,5 +100,5 @@ simplificare accidentală, fiecare este intenționată și documentată.
   ```
 ]
 
-Toate capturile din secțiunile de PoC (§V) au fost realizate cu output-ul acestei
+Toate capturile din secțiunile de PoC au fost realizate cu output-ul acestei
 comenzi vizibil în terminal, confirmând că atacul rulează pe versiunea vulnerabilă.

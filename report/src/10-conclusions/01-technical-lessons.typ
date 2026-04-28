@@ -17,7 +17,7 @@ Metoda de generare a token-ului de resetare de pe branch-ul vulnerabil implică 
 concatenări de variabile și codificări Base64 (`base64(email + unix_timestamp)`), rezultând
 într-o structură aparent complexă. Cu toate acestea, oferă zero protecție criptografică. În
 contrast, apelarea directă a funcției `crypto/rand` într-un buffer de 32 de octeți este
-trivială din punct de vedere al implementării, dar matematic imposibil de dedus. Lecția
+trivială din punct de vedere al implementării, dar computațional infezabil de dedus. Lecția
 extrasă este că securitatea nu decurge din complexitatea transformărilor textuale, ci
 exclusiv din entropia sursei generatoare.
 

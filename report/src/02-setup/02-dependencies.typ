@@ -59,7 +59,7 @@ Proiectul utilizează generare de cod pentru două componente critice:
 
 *sqlc* - transformă fișierele `.sql` din `pkg/db/migrations/` și interogările din
 `pkg/db/queries/` în cod Go cu tipuri stricte. Fiecare parametru SQL devine un câmp
-tipizat în Go; concatenarea de string-uri în interogări este structural imposibilă.
+tipizat în Go; concatenarea de string-uri în interogări este prevenită la nivel de generare a codului.
 
 *OpenAPI* - specificația `openapi.yaml` este compilată în tipuri Go pentru
 validarea request-urilor la runtime.

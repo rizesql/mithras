@@ -12,7 +12,7 @@ orientate pe securitate.
   table(
     columns: (auto, auto, 1fr),
     table.header[*Componentă*][*Versiune*][*Rol*],
-    [Go], [1.26], [Runtime Identity Provider - logică auth, semnare token],
+    [Go], [1.26.2], [Runtime Identity Provider - logică auth, semnare token],
     [PostgreSQL], [18], [Stocare persistentă: utilizatori, sesiuni, token-uri de resetare],
     [Redis], [8], [Rate limiting - token bucket implementat prin script Lua atomic],
     [ClickHouse / HyperDX], [-], [Telemetrie OpenTelemetry: trace-uri, metrici, log-uri],
@@ -44,7 +44,7 @@ opac `HttpOnly`. Astfel, se mediază tranziția de la starea browserului la serv
 backend.
 
 Prin impunerea flag-urilor `HttpOnly`, `Secure` și `SameSite=Strict` asupra cookie-urilor
-de sesiune, se creează o segregare fizică între codul client și identificatorul de sesiune.
+de sesiune, se creează o segregare logică între codul client și identificatorul de sesiune.
 Această decizie neutralizează atacurile de tip _Session Hijacking_ bazate pe extragerea
 datelor din `LocalStorage`, atenuând o vulnerabilitate structurală a aplicațiilor Single
 Page Application (SPA) convenționale.

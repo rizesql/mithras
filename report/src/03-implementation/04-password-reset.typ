@@ -21,7 +21,7 @@ sistemului este ilustrată în diagrama de mai jos:
 
 Atunci când un utilizator solicită resetarea parolei prin endpoint-ul
 `POST /forgot-password`, sistemul generează un token format din
-32 de octeți de date pseudo-aleatorii sigure criptografic (`crypto/rand`).
+32 de octeți de date aleatorii generate de un CSPRNG (`crypto/rand`).
 Această decizie asigură o entropie de *256 de biți*, depășind semnificativ
 recomandările OWASP de minimum 128 de biți pentru token-uri de recuperare.
 Mithras utilizează un format
@@ -58,7 +58,7 @@ momentul resetării, sistemul invalidează automat orice alte cereri de resetare
 active emise anterior pentru același utilizator.
 
 O barieră suplimentară este verificarea istoricului parolelor, unde noua parolă este
-re-hash-uită și comparată cu ultimele cinci hash-uri din tabelul
+supusă derivării criptografice și comparată cu ultimele cinci hash-uri din tabelul
 `password_history`. Dacă se detectează o potrivire, cererea este respinsă, forțând
 utilizatorul să adopte o identitate digitală nouă și prevenind vulnerabilitățile
 legate de rotația între parole cunoscute.

@@ -39,7 +39,7 @@ categoriile OWASP Top 10 @owasp2025 și identificatorii CWE corespunzători.
     [VULN-01], [Password Policy slab], [A07], [CWE-521],
     [VULN-02], [Stocare nesigură a parolelor], [A02], [CWE-256],
     [VULN-03], [Brute force / lipsă rate limiting], [A07], [CWE-307],
-    [VULN-04], [User Enumeration], [A06], [CWE-204],
+    [VULN-04], [User Enumeration], [A07], [CWE-204],
     [VULN-05], [Gestionare nesigură a sesiunilor], [A07], [CWE-614],
     [VULN-06], [Token de resetare predictibil], [A07], [CWE-640],
   ),

@@ -5,7 +5,7 @@ diferențiat pe versiunea V1: un utilizator inexistent generează eroarea `errUs
 pe când o parolă greșită pentru un utilizator valid generează `errWrongPassword`.
 Suplimentar, funcția omite calculul pe un *dummy hash* pentru utilizatorii inexistenți,
 generând o discrepanță majoră de timp de răspuns. Vulnerabilitatea se încadrează la
-A07:2025 / A06:2025 și CWE-204 (Observable Response Discrepancy) @cwe204.
+A07:2025 și CWE-204 (Observable Response Discrepancy) @cwe204.
 
 === Fundamentare Teoretică și Implementare Defectuoasă
 

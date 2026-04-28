@@ -22,6 +22,6 @@ Created`. Contul este creat cu succes cu parola `"1"`, devenind astfel complet l
 apărare împotriva unui dicționar sau atac forță brută trivial.
 
 #figure(
-  caption: [TODO],
+  caption: [Demonstrația vulnerabilității VULN-01: Crearea contului cu parolă trivială ("1") returnând codul HTTP 201 Created.],
   image("assets/01-poc-01.png"),
 )

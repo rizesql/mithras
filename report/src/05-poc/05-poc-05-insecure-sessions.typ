@@ -24,6 +24,6 @@ HTTP (ex. cURL) pentru a prelua și utiliza sesiunea valabilă timp de 24 de ore
 orice acțiuni de invalidare din partea utilizatorului.
 
 #figure(
-  caption: [TODO],
+  caption: [Demonstrația vulnerabilității VULN-05: Furtul sesiunii extrăgând cookie-ul vulnerabil lipsit de flag-ul HttpOnly din consola JavaScript.],
   image("assets/05-poc-05.png"),
 )

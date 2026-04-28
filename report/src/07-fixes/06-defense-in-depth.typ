@@ -14,7 +14,7 @@ intermediul setului de instrumente `sqlc`.
 Această tehnologie pre-procesează fișierele `.sql` strict tipizate, transformând sintaxa în
 funcții Go. Astfel, orice variabilă din cod trimisă către PostgreSQL este interpretată prin
 protocolul binar (la nivel de socket, folosind marcaje specifice precum `$1`, `$2`),
-interzicând complet, din faza de compilare, interpretarea malițioasă a corpului interogării.
+interzicând complet, din faza de generare a codului, interpretarea malițioasă a corpului interogării.
 
 === Prevenirea Vulnerabilităților de Tip IDOR
 

@@ -23,9 +23,9 @@ niciun efort computațional pentru a obține accesul la cont, informația fiind 
 direct.
 
 Dacă s-ar folosi implementarea corectă, coloana `secret` ar afișa un șir lung ce
-începe cu `$argon2id$`, mascat matematic.
+începe cu `$argon2id$`, protejat criptografic prin derivare de cheie.
 
 #figure(
-  caption: [TODO],
+  caption: [Demonstrația vulnerabilității VULN-02: Extragerea credențialelor în clar din baza de date PostgreSQL.],
   image("assets/02-poc-02.png"),
 )
