@@ -2,7 +2,6 @@ package password
 
 import (
 	"fmt"
-	"unicode"
 
 	"github.com/rizesql/mithras/internal/errkit"
 )
@@ -33,31 +32,9 @@ type Raw struct {
 func (Raw) String() string { return "[REDACTED]" }
 
 func New(raw string) (Raw, error) {
-	if len(raw) < minLength {
-		return Raw{}, ErrTooShort
-	}
-
-	if !meetsComplexityRequirements(raw) {
-		return Raw{}, ErrWeak
+	if len(raw) == 0 {
+		return Raw{}, fmt.Errorf("password cannot be empty")
 	}
 
 	return Raw{value: raw}, nil
-}
-
-func meetsComplexityRequirements(raw string) bool {
-	var hasUpper, hasLower, hasDigit, hasSpecial bool
-	for _, c := range raw {
-		switch {
-		case unicode.IsUpper(c):
-			hasUpper = true
-		case unicode.IsLower(c):
-			hasLower = true
-		case unicode.IsDigit(c):
-			hasDigit = true
-		case unicode.IsPunct(c) || unicode.IsSymbol(c):
-			hasSpecial = true
-		}
-	}
-
-	return hasUpper && hasLower && hasDigit && hasSpecial
 }

@@ -6,10 +6,16 @@ import (
 
 var (
 	// Login errors
-	errInvalidCredentials = errkit.New("invalid credentials",
-		errkit.WithCode(errkit.User.Request.Code("invalid_credentials")),
-		errkit.Internal("invalid email or password"),
-		errkit.Public("Invalid email or password."),
+	errUserNotFound = errkit.New("user not found",
+		errkit.WithCode(errkit.User.Request.Code("user_not_found")),
+		errkit.Internal("user not found in database"),
+		errkit.Public("User not found."),
+	)
+
+	errWrongPassword = errkit.New("wrong password",
+		errkit.WithCode(errkit.User.Request.Code("wrong_password")),
+		errkit.Internal("wrong password"),
+		errkit.Public("Wrong password."),
 	)
 
 	errSessionLookupFailed = func(err error) error {
@@ -83,14 +89,6 @@ var (
 		)
 	}
 
-	errResetTokenGenerationFailed = func(err error) error {
-		return errkit.Wrap(err,
-			errkit.App.Internal.Code("token_generation_failed"),
-			errkit.Internal("failed to generate random secret"),
-			errkit.Public("Failed to process request."),
-		)
-	}
-
 	errTokenInsertFailed = func(err error) error {
 		return errkit.Wrap(err,
 			errkit.App.Internal.Code("token_insert_failed"),
@@ -116,11 +114,6 @@ var (
 			errkit.Public("Failed to process request."),
 		)
 	}
-
-	errResetTokenSecretMismatch = errkit.New("reset token secret mismatch",
-		errkit.User.Request.Code("reset_token_invalid"),
-		errkit.Public("The password reset link is invalid."),
-	)
 
 	errPasswordHistoryLookupFailed = func(err error) error {
 		return errkit.Wrap(err,
@@ -244,14 +237,6 @@ var (
 		return errkit.Wrap(err,
 			errkit.App.Unavailable.Code("session_lookup_failed"),
 			errkit.Internal("failed to load session by refresh token hash"),
-			errkit.Public("Service temporarily unavailable."),
-		)
-	}
-
-	errLogoutSessionRevocationFailed = func(err error) error {
-		return errkit.Wrap(err,
-			errkit.App.Unavailable.Code("logout_session_revocation_failed"),
-			errkit.Internal("failed to revoke user sessions during logout"),
 			errkit.Public("Service temporarily unavailable."),
 		)
 	}

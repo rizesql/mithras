@@ -17,7 +17,6 @@ import (
 	resetpassword "github.com/rizesql/mithras/internal/mithras/routes/reset-password"
 	"github.com/rizesql/mithras/internal/mithras/routes/static"
 	"github.com/rizesql/mithras/internal/mithras/routes/token"
-	"github.com/rizesql/mithras/internal/ratelimit"
 	"github.com/rizesql/mithras/pkg/httpkit"
 	"github.com/rizesql/mithras/pkg/httpkit/middleware"
 )
@@ -30,72 +29,48 @@ func Register(srv *httpkit.Server, plt *platform.Platform) {
 	withTimeout := middleware.WithTimeout(time.Minute)
 	withValidation := middleware.WithValidation(plt.Validator)
 
-	withRateLimit := middleware.WithRateLimit(ratelimit.NewPolicy("global-per-ip",
-		1000, time.Minute,
-		ratelimit.KeyIP(),
-		ratelimit.WithStore(plt.RateLimit),
-		ratelimit.WithBurst(),
-		ratelimit.WithFailOpen(),
-	))
-
 	srv.RegisterRoute(oas.New(),
 		withPanicRecovery,
 		withTimeout,
-		withRateLimit,
-		jwks.RateLimit(plt),
 	)
 	srv.RegisterRoute(jwks.New(plt),
 		withPanicRecovery,
 		withTimeout,
-		withRateLimit,
-		jwks.RateLimit(plt),
 	)
 
 	srv.RegisterRoute(authorize.New(plt),
 		withPanicRecovery,
 		withTimeout,
-		withRateLimit,
 	)
 	srv.RegisterRoute(token.New(plt),
 		withPanicRecovery,
 		withTimeout,
-		withRateLimit,
 		withValidation,
 	)
 
 	srv.RegisterRoute(register.New(plt),
 		withPanicRecovery,
 		withTimeout,
-		withRateLimit,
-		register.RateLimit(plt),
 		withValidation,
 	)
 	srv.RegisterRoute(login.New(plt),
 		withPanicRecovery,
 		withTimeout,
-		withRateLimit,
-		login.RateLimit(plt),
 		withValidation,
 	)
 	srv.RegisterRoute(logout.New(plt),
 		withPanicRecovery,
 		withTimeout,
-		withRateLimit,
-		logout.RateLimit(plt),
 		withValidation,
 	)
 	srv.RegisterRoute(forgotpassword.New(plt),
 		withPanicRecovery,
 		withTimeout,
-		withRateLimit,
-		forgotpassword.RateLimit(plt),
 		withValidation,
 	)
 	srv.RegisterRoute(resetpassword.New(plt),
 		withPanicRecovery,
 		withTimeout,
-		withRateLimit,
-		resetpassword.RateLimit(plt),
 		withValidation,
 	)
 

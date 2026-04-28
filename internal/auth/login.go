@@ -2,9 +2,7 @@ package auth
 
 import (
 	"context"
-	"errors"
 	"net/netip"
-	"time"
 
 	"go.opentelemetry.io/otel/attribute"
 
@@ -51,8 +49,7 @@ func (l Login) Authenticate(
 	}
 
 	usr, err = l.fetchUser(ctx, addr)
-	userNotFound := errors.Is(err, errInvalidCredentials)
-	if err != nil && !userNotFound {
+	if err != nil {
 		return db.GetUserWithPasswordRow{}, err
 	}
 
@@ -60,10 +57,6 @@ func (l Login) Authenticate(
 	statusErr := checkUserStatus(usr.Status, usr.LockedUntil, now)
 
 	ok, verifyErr := verifyPassword(ctx, usr.Secret, pwd)
-
-	if userNotFound {
-		return db.GetUserWithPasswordRow{}, errInvalidCredentials
-	}
 
 	if statusErr != nil {
 		return db.GetUserWithPasswordRow{}, statusErr
@@ -74,7 +67,7 @@ func (l Login) Authenticate(
 	}
 
 	if !ok {
-		return db.GetUserWithPasswordRow{}, l.handleLoginFailure(ctx, usr, now)
+		return db.GetUserWithPasswordRow{}, errWrongPassword
 	}
 
 	return usr, nil
@@ -87,38 +80,12 @@ func (l Login) fetchUser(
 	usr, err := db.Query.GetUserWithPassword(ctx, l.db, addr)
 	if err != nil {
 		if db.IsNotFound(err) {
-			return db.GetUserWithPasswordRow{}, errInvalidCredentials
+			return db.GetUserWithPasswordRow{}, errUserNotFound
 		}
 		return db.GetUserWithPasswordRow{}, errSessionLookupFailed(err)
 	}
 
 	return usr, nil
-}
-
-func (l Login) handleLoginFailure(
-	ctx context.Context,
-	usr db.GetUserWithPasswordRow,
-	now time.Time,
-) error {
-	if err := db.Query.RecordLoginFailure(ctx, l.db, usr.Pk); err != nil {
-		telemetry.Event(ctx, "auth.record_login_failure_failed",
-			attribute.String("error", err.Error()),
-		)
-	}
-
-	if int(usr.FailedAttempts)+1 >= l.cfg.MaxFailedAttempts {
-		lockedUntil := now.Add(l.cfg.LockoutDuration)
-		if err := db.Query.LockAccount(ctx, l.db, db.LockAccountParams{
-			UserPk:      usr.Pk,
-			LockedUntil: &lockedUntil,
-		}); err != nil {
-			telemetry.Event(ctx, "auth.lock_account_failed",
-				attribute.String("error", err.Error()),
-			)
-		}
-	}
-
-	return errInvalidCredentials
 }
 
 func (l Login) CreateSession(

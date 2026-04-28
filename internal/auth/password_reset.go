@@ -2,9 +2,7 @@ package auth
 
 import (
 	"context"
-	"crypto/rand"
 	"crypto/sha256"
-	"crypto/subtle"
 	"encoding/base64"
 	"fmt"
 	"net/netip"
@@ -52,12 +50,10 @@ func (r PasswordReset) Request(
 		return errUserLookupFailed(err)
 	}
 
-	secret := make([]byte, 32)
-	if _, err := rand.Read(secret); err != nil {
-		return errResetTokenGenerationFailed(err)
-	}
+	nowUnix := r.clk.Now().Unix()
+	raw := fmt.Sprintf("%s:%d", addr.Raw(), nowUnix)
+	secretStr := base64.RawURLEncoding.EncodeToString([]byte(raw))
 
-	secretStr := base64.RawURLEncoding.EncodeToString(secret)
 	hash := sha256.Sum256([]byte(secretStr))
 	id := idkit.NewPasswordResetID()
 
@@ -117,7 +113,6 @@ func (r PasswordReset) validateToken(
 	}
 
 	id := parts[0]
-	secretStr := parts[1]
 
 	rst, err := db.Query.PasswordResetGetActive(ctx, r.db, idkit.PasswordResetID(id))
 	if err != nil {
@@ -125,11 +120,6 @@ func (r PasswordReset) validateToken(
 			return db.PasswordResetGetActiveRow{}, errResetTokenNotFound
 		}
 		return db.PasswordResetGetActiveRow{}, errTokenLookupFailed(err)
-	}
-
-	hash := sha256.Sum256([]byte(secretStr))
-	if subtle.ConstantTimeCompare(hash[:], rst.TokenHash) != 1 {
-		return db.PasswordResetGetActiveRow{}, errResetTokenSecretMismatch
 	}
 
 	return rst, nil
@@ -188,8 +178,6 @@ func (r PasswordReset) performReset(
 	rst db.PasswordResetGetActiveRow,
 	newSecret *password.Hashed,
 ) error {
-	now := r.clk.Now()
-
 	err := db.Tx(ctx, r.db, func(tx db.DBTX) error {
 		if err := db.Query.InsertPasswordHistory(ctx, tx, db.InsertPasswordHistoryParams{
 			UserPk: rst.UserPk,
@@ -201,25 +189,6 @@ func (r PasswordReset) performReset(
 		if err := db.Query.UpdateCredentialByUserId(ctx, tx, db.UpdateCredentialByUserIdParams{
 			UserPk: rst.UserPk,
 			Secret: *newSecret,
-		}); err != nil {
-			return err
-		}
-
-		if err := db.Query.PasswordResetMarkUsed(ctx, tx, rst.Pk); err != nil {
-			return err
-		}
-
-		err := db.Query.PasswordResetInvalidateSiblings(ctx, tx, db.PasswordResetInvalidateSiblingsParams{
-			UserPk: rst.UserPk,
-			Pk:     rst.Pk,
-		})
-		if err != nil {
-			return err
-		}
-
-		if err := db.Query.RevokeUserSessions(ctx, tx, db.RevokeUserSessionsParams{
-			UserPk: rst.UserPk,
-			Now:    &now,
 		}); err != nil {
 			return err
 		}

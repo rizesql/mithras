@@ -45,39 +45,6 @@ func (l *Logout) Logout(ctx context.Context, rawToken string) (err error) {
 		return errInvalidLogoutToken("session expired")
 	}
 
-	if sess.RevokedAt != nil {
-		telemetry.Event(ctx, "auth.refresh_token_replay",
-			attribute.String("session.id", sess.ID.String()),
-			attribute.String("user.id", sess.UserID.String()),
-		)
-
-		revErr := db.Query.RevokeUserSessions(ctx, l.db, db.RevokeUserSessionsParams{
-			Now:    &now,
-			UserPk: sess.UserPk,
-		})
-		if revErr != nil {
-			telemetry.Event(ctx, "auth.replay_revocation_failed",
-				attribute.String("error", telemetry.Err(ctx, revErr).Error()),
-			)
-		}
-
-		return errInvalidLogoutToken("token was previously revoked; anomaly detected")
-	}
-
-	revErr := db.Query.RevokeUserSessions(ctx, l.db, db.RevokeUserSessionsParams{
-		Now:    &now,
-		UserPk: sess.UserPk,
-	})
-	if revErr != nil {
-		telemetry.Event(ctx, "auth.logout_revocation_failed",
-			attribute.String("error", revErr.Error()),
-			attribute.String("session.id", sess.ID.String()),
-			attribute.String("user.id", sess.UserID.String()),
-		)
-
-		return errLogoutSessionRevocationFailed(telemetry.Err(ctx, revErr))
-	}
-
 	telemetry.Event(ctx, "auth.logout_success",
 		attribute.String("session.id", sess.ID.String()),
 		attribute.String("user.id", sess.UserID.String()),

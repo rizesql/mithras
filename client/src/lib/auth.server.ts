@@ -11,18 +11,18 @@ export function createAuthClient(event: RequestEvent) {
 
 export function setTokens(event: RequestEvent, access: string, refresh: string) {
   event.cookies.set("refresh_token", refresh, {
-    httpOnly: true,
-    sameSite: "strict",
+    httpOnly: false,
+    sameSite: "lax",
     path: "/",
     maxAge: 34560000,
-    secure: true,
+    secure: false,
   });
 
   event.cookies.set("access_token", access, {
-    httpOnly: true,
-    sameSite: "strict",
+    httpOnly: false,
+    sameSite: "lax",
     path: "/",
     maxAge: 34560000,
-    secure: true,
+    secure: false,
   });
 }

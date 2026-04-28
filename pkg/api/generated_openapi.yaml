@@ -601,7 +601,7 @@ components:
                         at least one uppercase letter, one lowercase letter, one digit, and one special character.
                     type: string
                     format: password
-                    minLength: 8
+                    minLength: 1
                     maxLength: 256
         LoginRequest:
             type: object
@@ -621,7 +621,7 @@ components:
                         at least one uppercase letter, one lowercase letter, one digit, and one special character.
                     type: string
                     format: password
-                    minLength: 8
+                    minLength: 1
                     maxLength: 256
         ForgotPasswordRequest:
             type: object
