@@ -62,7 +62,7 @@ explicit înaintea primei porniri a serverului:
   ```
 ]
 
-La pornire, serverul apelează verifică integritatea schemei in baza de date și refuză să
+La pornire, serverul verifică integritatea schemei in baza de date și refuză să
 pornească dacă există migrații neaplicate, prevenind incompatibilități între cod și schemă.
 
 #figure(

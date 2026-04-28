@@ -6,8 +6,8 @@ viabilitatea următoarelor concepte tehnice.
 === Rata de Răspuns a Sistemului ca Interfață de Expunere
 Vulnerabilitatea de enumerare a utilizatorilor (VULN-04) demonstrează că un mesaj de eroare
 generic este o măsură necesară, dar insuficientă, în lipsa unei uniformizări temporale.
-Diferența de timp de răspuns între evaluarea unui utilizator inexistent (~1ms) și rularea
-algoritmului Argon2id pentru un utilizator valid (~250ms) a oferit atacatorului un canal
+Diferența de timp de răspuns între evaluarea unui utilizator inexistent și rularea
+algoritmului Argon2id pentru un utilizator valid a oferit atacatorului un canal
 lateral (*Side-Channel*) la fel de precis ca o confirmare explicită. Introducerea
 mecanismului de *dummy hash* demonstrează că, în contextul securității ofensive, timpul de
 procesare reprezintă o scurgere de informații (*Information Leak*).

@@ -42,6 +42,8 @@
 #include "02-setup/00-index.typ"
 #include "03-implementation/00-index.typ"
 #include "04-vulnerabilities/00-index.typ"
+#include "05-poc/00-index.typ"
 #include "06-impact/00-index.typ"
 #include "07-fixes/00-index.typ"
 #include "10-conclusions/00-index.typ"
+#include "11-bonus/00-index.typ"

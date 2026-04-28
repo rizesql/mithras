@@ -22,7 +22,7 @@ timpul de răspuns între un email inexistent și o parolă greșită. Mithras n
 acest vector prin două mecanisme complementare. Primul mecanism, *Dummy Hash*, se
 activează dacă utilizatorul nu este găsit în baza de date; în acest caz, sistemul
 execută `verifyPassword()` utilizând un hash Argon2id pre-generat cu parametri
-identici. Astfel, timpul de procesare rămâne constant la nivel computațional (~250ms),
+identici. Astfel, timpul de procesare rămâne constant la nivel computațional,
 reducând diferența temporală la nivel de micro-jitter de rețea și făcând enumerarea
 utilizatorilor statistic inaplicabilă pentru un atacator remote. Al doilea mecanism,
 *Comparație în Timp Constant*, presupune că rezultatul hash-ului calculat este comparat
