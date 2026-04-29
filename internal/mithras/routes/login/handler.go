@@ -42,7 +42,7 @@ func (h *handler) Handle(ctx context.Context, c *httpkit.Context) error {
 
 	usr, err := h.login.Authenticate(ctx, string(req.Email), req.Password)
 	if err != nil {
-		return errInvalidCredentials
+		return err
 	}
 
 	cookie, err := c.Req().Raw().Cookie("Auth-State")
