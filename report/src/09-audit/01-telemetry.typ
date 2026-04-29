@@ -28,9 +28,9 @@ vizibilitate completă asupra evenimentelor de securitate.
   image("assets/01-telemetry-col-values.png"),
 )
 
-În cazul detectării unor tipare ofensive, precum un atac de dicționar blocat de
-sistemul de Rate Limiting sau o tentativă de reutilizare a unui token de refresh revocat
-(*Token Replay*), sistemul emite *Span Events* specifice (`auth.lock_account_failed`,
+În cazul detectării unor tipare ofensive, precum un atac de dicționar blocat de sistemul
+de Rate Limiting sau o tentativă de reutilizare a unui token de refresh revocat (*Token
+Replay*), sistemul emite *Span Events* specifice (`auth.lock_account_failed`,
 `auth.refresh_token_replay`), semnalizând un incident de securitate iminent către
 platformele SIEM.
 

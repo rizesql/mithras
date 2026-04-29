@@ -15,10 +15,9 @@ prevenind la sursă vulnerabilitatea de tip CWE-521.
 Pentru remedierea CWE-256 (stocarea în clar), funcția de transformare utilizează Argon2id
 cu parametri adaptați mediului de producție ($m=65536, t=2, p=2$). Argon2id a fost ales în
 detrimentul algoritmilor rapizi (ex. SHA-256) datorită factorului său de întărire pe baza
-consumului de memorie (*Memory Hardness*), care limitează sever eficiența atacurilor paralele 
-executate pe GPU sau ASIC.
+consumului de memorie (*Memory Hardness*), care limitează sever eficiența atacurilor
+paralele executate pe GPU sau ASIC.
 
 Valoarea stocată în baza de date este codificată în formatul standard PHC, care
-încapsulează inclusiv salt-ul de 16 octeți generat aleatoriu (`crypto/rand`).
-Astfel, parolele stocate ireversibil nu pot fi compromise în cazul scurgerilor
-stratului de persistență.
+încapsulează inclusiv salt-ul de 16 octeți generat aleatoriu. Astfel, parolele stocate
+ireversibil nu pot fi compromise în cazul scurgerilor stratului de persistență.

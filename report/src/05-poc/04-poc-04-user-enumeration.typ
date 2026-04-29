@@ -23,7 +23,7 @@ memorie necesare pentru procesarea parolei (dacă VULN-02 nu era activ, sau dato
 preluării profilului din baza de date).
 
 Pentru `nobody@authx.com` (inexistent), serverul întoarce: `{"error": "User not found"}`,
-iar comparația de parolă se omite, făcând durata de procesare observabil mai redusă (~1ms).
+iar comparația de parolă se omite, făcând durata de procesare observabil mai redusă.
 Diferența semantica expune atacatorului certitudinea existenței adresei de email testate,
 creând un recensământ detaliat al țintelor valide.
 

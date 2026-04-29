@@ -4,8 +4,8 @@
 
 Demersul practic vizează analiza modului în care mecanismele de autentificare pot fi
 compromise în absența unor controale riguroase și fundamentarea tehnică a soluțiilor de
-remediere. Procesul necesită adoptarea unui rol dual. În calitate de _Security Auditor_, se
-urmărește identificarea vectorilor de atac și demonstrarea impactului acestora asupra
+remediere. Procesul necesită adoptarea unui rol dual. În calitate de _Security Auditor_,
+se urmărește identificarea vectorilor de atac și demonstrarea impactului acestora asupra
 confidențialității, integrității și disponibilității datelor. Complementar, rolul de
 _Security Engineer_ presupune implementarea controalelor de securitate compensatorii la
 nivelul codului sursă pentru neutralizarea vulnerabilităților identificate.
@@ -17,16 +17,16 @@ recuperare a accesului.
 
 === Model de Amenințare și Perimetru
 
-Actorul de amenințare vizat este un atacator extern, neautentificat, cu acces la nivel
-de rețea la endpoint-urile HTTP publice ale sistemului. Nu se presupune acces fizic la
+Actorul de amenințare vizat este un atacator extern, neautentificat, cu acces la nivel de
+rețea la endpoint-urile HTTP publice ale sistemului. Nu se presupune acces fizic la
 infrastructură, privilegii de sistem sau cunoașterea prealabilă a credențialelor.
 
 Perimetrul auditului este definit explicit. Componentele *in-scope* cuprind înregistrarea
 utilizatorilor (`/register`), autentificarea (`/login`), deconectarea (`/logout`), rotația
 token-urilor (`/token`), resetarea parolei (`/forgot-password`, `/reset-password`) și
-gestionarea sesiunilor active. Sunt considerate *out-of-scope* logica de autorizare la nivelul
-resurselor de business, vulnerabilitățile IDOR în afara fluxurilor de autentificare,
-precum și injecțiile SQL în endpoint-uri nelegate de autentificare.
+gestionarea sesiunilor active. Sunt considerate *out-of-scope* logica de autorizare la
+nivelul resurselor de business, vulnerabilitățile IDOR în afara fluxurilor de
+autentificare, precum și injecțiile SQL în endpoint-uri nelegate de autentificare.
 
 Tabelul de mai jos listează cele șase clase de vulnerabilități demonstrate, mapate pe
 categoriile OWASP Top 10 @owasp2025 și identificatorii CWE corespunzători.
@@ -49,8 +49,8 @@ categoriile OWASP Top 10 @owasp2025 și identificatorii CWE corespunzători.
 
 Din punct de vedere al contextului de utilizare, sistemul deservește entitatea fictivă
 "AuthX", care folosește aplicația pentru medierea accesului angajaților la resurse
-corporative sensibile. Premisa auditului este că sistemul se află deja în producție, însă
-o evaluare internă a semnalat deficiențe critice la nivelul autentificării. Trecerea la
-standarde moderne, precum _Argon2id_ @rfc9106 și _EdDSA_ @rfc8032, răspunde cerinței
+sensibile. Premisa auditului este că sistemul se află deja în producție, însă o evaluare
+internă a semnalat deficiențe critice la nivelul autentificării. Trecerea la standarde
+moderne, precum _Argon2id_ @rfc9106 și _EdDSA_ @rfc8032, răspunde cerinței
 imperative de a proteja materialul de autentificare împotriva atacurilor de tip
 _offline brute-force_ și a furturilor de date.

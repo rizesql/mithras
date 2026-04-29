@@ -19,10 +19,10 @@ baza de date, sistemul nu returnează eroarea instantaneu. În schimb, apelul fu
 verificare Argon2id se execută integral pe un hash fictiv, pre-generat și menținut în
 memorie în timpul funcționării serverului.
 
-În consecință, timpul de răspuns la un eșec (fie email greșit, fie parolă greșită) se menține
-relativ constant. Din perspectiva atacatorului care vizează o conexiune de rețea peste
-internet, variația introdusă este anulată de instabilitatea rețelei, anulând valoarea
-informațională a atacului de timing.
+În consecință, timpul de răspuns la un eșec (fie email greșit, fie parolă greșită) se
+menține relativ constant. Din perspectiva atacatorului care vizează o conexiune de rețea
+peste internet, variația introdusă este anulată de instabilitatea rețelei, anulând
+valoarea informațională a atacului de timing.
 
 În plus, comparația finală între hash-ul calculat și cel extras din baza de date se face
 folosind strict funcția `subtle.ConstantTimeCompare()`, care previne deducția bit-cu-bit.

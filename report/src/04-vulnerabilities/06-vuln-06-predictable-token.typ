@@ -35,7 +35,8 @@ secundă) concatenat cu adresa de email:
 ]
 
 Suplimentar, la schimbarea efectivă a parolei, sistemul nu marchează token-ul ca fiind
-utilizat (`used_at IS NULL` rămâne activ) și nu forțează un logout global (`Force Logout All`).
+utilizat (`used_at IS NULL` rămâne activ) și nu forțează un logout global (`Force Logout
+All`).
 
 === Mecanism de Atac și Exploatare
 

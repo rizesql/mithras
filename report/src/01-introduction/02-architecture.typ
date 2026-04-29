@@ -2,10 +2,10 @@
 
 Arhitectura sistemului Mithras este fundamentată pe principiul separării
 responsabilităților (_Separation of Concerns_) și pe izolarea strictă a limitelor de
-încredere (_Trust Boundaries_). Proiectul abandonează modelul monolit în favoarea unei
-arhitecturi decuplate, capabile să reziste atacurilor specifice mediilor web moderne prin
-utilizarea unor primitive criptografice de ultimă generație și a unor șabloane de design
-orientate pe securitate.
+încredere (_Trust Boundaries_). Proiectul respinge modelul monolitic în favoarea unei
+arhitecturi decuplate, capabile să reziste atacurilor specifice mediilor web contemporane
+prin utilizarea unor primitive criptografice de ultimă generație și a unor șabloane de
+design orientate pe securitate.
 
 #figure(
   caption: [Stack tehnic],
@@ -13,7 +13,7 @@ orientate pe securitate.
     columns: (auto, auto, 1fr),
     table.header[*Componentă*][*Versiune*][*Rol*],
     [Go], [1.26.2], [Runtime Identity Provider - logică auth, semnare token],
-    [PostgreSQL], [18], [Stocare persistentă: utilizatori, sesiuni, token-uri de resetare],
+    [PostgreSQL], [18], [Stocare persistentă - utilizatori, sesiuni, token-uri de resetare],
     [Redis], [8], [Rate limiting - token bucket implementat prin script Lua atomic],
     [ClickHouse / HyperDX], [-], [Telemetrie OpenTelemetry: trace-uri, metrici, log-uri],
     [SvelteKit], [2], [Consumer BFF - gestionare sesiune browser, cookie HttpOnly],
@@ -32,21 +32,31 @@ orientate pe securitate.
 Sistemul implementează un model de încredere tripartit, ierarhizat în funcție de
 capacitatea mediului de a proteja materialul criptografic sensibil:
 
-1. _Identity Provider (Mithras / Go)_: Reprezintă *Sursa de Încredere* (_Root of Trust_). Este singura entitate autorizată să gestioneze secretele pe termen lung (procesând parolele în clar exclusiv în memoria volatilă, pe durata derivării). Operațiunile critice (generarea cheilor Ed25519, hashing-ul Argon2id și emiterea token-urilor JWS) sunt centralizate și izolate la acest nivel.
-2. _Resource Server (BFF / SvelteKit)_: Acționează ca un *Client Confidențial*. Deși nu interacționează niciodată cu parolele utilizatorilor, acesta deține capacitatea de a valida aserțiunile de identitate prin verificarea locală a semnăturilor digitale, utilizând un set de chei publice (JWKS) expus de IdP.
-3. _User Agent (Browser)_: Definit formal ca un mediu de execuție nesigur (_Untrusted Environment_). Designul interzice expunerea oricărui material criptografic neopac (precum token-urile Bearer/JWS) către execuția JavaScript, eliminând astfel riscul de furt al identității digitale prin vulnerabilități de tip Cross-Site Scripting (XSS).
+1. _Identity Provider (Mithras / Go)_: Reprezintă *Sursa de Încredere* (_Root of Trust_).
+  Este singura entitate autorizată să gestioneze secretele pe termen lung (procesând
+  parolele în clar exclusiv în memoria volatilă, pe durata derivării). Operațiunile
+  critice (generarea cheilor Ed25519, hashing-ul Argon2id și emiterea token-urilor JWS)
+  sunt centralizate și izolate la acest nivel.
+2. _Resource Server (BFF / SvelteKit)_: Acționează ca un *Client Confidențial*. Deși nu
+  interacționează niciodată cu parolele utilizatorilor, acesta deține capacitatea de a
+  valida aserțiunile de identitate prin verificarea locală a semnăturilor digitale,
+  utilizând un set de chei publice (JWKS) expus de IdP.
+3. _User Agent (Browser)_: Definit formal ca un mediu de execuție nesigur (_Untrusted
+  Environment_). Designul interzice expunerea oricărui material criptografic neopac
+  (precum token-urile Bearer/JWS) către execuția JavaScript, eliminând astfel riscul de
+  furt al identității digitale prin vulnerabilități de tip Cross-Site Scripting (XSS).
 
-=== Șablonul Backend-for-Frontend (BFF)
+=== Modelul Backend-for-Frontend
 
-Integrarea arhitecturii BFF facilitează gestionarea securizată a sesiunilor. BFF-ul acționează
-ca un intermediar, stocând token-ul JWS local și expunând browserului exclusiv un cookie
-opac `HttpOnly`. Astfel, se mediază tranziția de la starea browserului la serviciile de
-backend.
+Integrarea arhitecturii Backend-for-Frontend (BFF) facilitează gestionarea securizată a
+sesiunilor. BFF-ul acționează ca un intermediar, stocând token-ul JWS local și expunând
+browserului exclusiv un cookie opac `HttpOnly`. Astfel, se mediază tranziția de la starea
+browserului la serviciile de backend.
 
 Prin impunerea flag-urilor `HttpOnly`, `Secure` și `SameSite=Strict` asupra cookie-urilor
 de sesiune, se creează o segregare logică între codul client și identificatorul de sesiune.
 Această decizie neutralizează atacurile de tip _Session Hijacking_ bazate pe extragerea
-datelor din `LocalStorage`, atenuând o vulnerabilitate structurală a aplicațiilor Single
+datelor din `localStorage`, atenuând o vulnerabilitate structurală a aplicațiilor Single
 Page Application (SPA) convenționale.
 
 === Protocolul de Autentificare: OAuth 2.0

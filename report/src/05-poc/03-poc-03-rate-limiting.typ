@@ -16,11 +16,11 @@ go run . -email victim@authx.com
 ```
 
 *Rezultat observat:*
-Output-ul script-ului demonstrează iterarea fluentă prin dicționar, marcând
-zeci de răspunsuri consecutive `401 Unauthorized`. Sistemul IdP nu blochează executarea.
-În momentul în care dicționarul testează valoarea "1", se returnează `200 OK`, iar
-script-ul raportează "Password found". Efortul atacatorului a necesitat zero pauze sau
-modificări de proxy/IP.
+Output-ul script-ului demonstrează iterarea fluentă prin dicționar, marcând zeci de
+răspunsuri consecutive `401 Unauthorized`. Sistemul IdP nu blochează executarea. În
+momentul în care dicționarul testează valoarea "1", se returnează `200 OK`, iar script-ul
+raportează "Password found". Efortul atacatorului a necesitat zero pauze sau modificări de
+proxy/IP.
 
 
 #figure(

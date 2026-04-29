@@ -42,7 +42,8 @@ Orice apel `go tool <utilitar>` descarcă și compilează automat versiunea core
 nu este necesară instalarea manuală și nu pot apărea divergențe de versiune.
 
 Mediul de dezvoltare este declarat integral și izolat prin *Nix Flake* (`flake.nix`).
-Pe mașina virtuală NixOS, utilitarele de sistem din tabel (Go, Node.js, Docker, just, golangci-lint) sunt descărcate și fixate la versiuni exacte prin `flake.lock`, garantând 100%
+Pe mașina virtuală NixOS, utilitarele de sistem din tabel (Go, Node.js, Docker, just,
+golangci-lint) sunt descărcate și fixate la versiuni exacte prin `flake.lock`, garantând
 reproductibilitate fără instalări manuale globale. Activarea mediului se face cu:
 
 #figure(
@@ -57,9 +58,9 @@ reproductibilitate fără instalări manuale globale. Activarea mediului se face
 
 Proiectul utilizează generare de cod pentru două componente critice:
 
-*sqlc* - transformă fișierele `.sql` din `pkg/db/migrations/` și interogările din
-`pkg/db/queries/` în cod Go cu tipuri stricte. Fiecare parametru SQL devine un câmp
-tipizat în Go; concatenarea de string-uri în interogări este prevenită la nivel de generare a codului.
+*sqlc* - transformă interogările din fișierele `.sql`, aflate în, `pkg/db/queries/` în cod
+Go cu tipuri bine definite. Fiecare parametru SQL devine un câmp typed în Go; concatenarea
+de string-uri în interogări este prevenită la nivel de generare a codului.
 
 *OpenAPI* - specificația `openapi.yaml` este compilată în tipuri Go pentru
 validarea request-urilor la runtime.

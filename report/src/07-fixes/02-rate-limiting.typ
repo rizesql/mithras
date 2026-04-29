@@ -16,11 +16,11 @@ de concurent creat de un atacator.
 === Politici Compuse și Fail-Closed
 
 Endpoint-urile critice, precum `/login` și `/register`, sunt protejate prin politici
-configurabile. Sistemul impune o limită globală per adresă IP (ex. 1000 de cereri pe minut)
-pentru protecția împotriva abuzurilor DDoS, suplimentată de un mecanism de *Account Lockout*
-(blocarea temporală a contului după 5 încercări eșuate consecutive).
+configurabile. Sistemul impune o limită globală per adresă IP (ex. 1000 de cereri pe
+minut) pentru protecția împotriva abuzurilor DDoS, suplimentată de un mecanism de *Account
+Lockout* (blocarea temporală a contului după 5 încercări eșuate consecutive).
 
 O decizie importantă de design integrată în middleware este adoptarea strategiei
 *Fail-Closed*: dacă serverul Redis devine indisponibil, cererile de autentificare sunt
-respinse implicit cu un cod de eroare severă (HTTP 500). Această alegere previne
-lăsarea sistemului neprotejat la forța brută sub pretextul degradării infrastructurii.
+respinse implicit cu un cod de eroare severă (HTTP 500). Această alegere previne lăsarea
+sistemului neprotejat la forța brută sub pretextul degradării infrastructurii.

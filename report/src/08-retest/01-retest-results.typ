@@ -7,8 +7,8 @@ sistemul respinge imediat cererea la nivelul validării datelor de intrare.
 *Rezultat observat:* Răspuns HTTP `400 Bad Request` cu un mesaj de eroare comprehensiv.
 Politicile de complexitate implementate în constructorul `password.New()` interceptează
 încercarea de instanțiere a unei structuri `Raw` necorespunzătoare. Cererea HTTP este
-terminată cu eroare înainte ca fluxul de execuție să atingă logica de creare a utilizatorului
-în tranzacția PostgreSQL.
+terminată cu eroare înainte ca fluxul de execuție să atingă logica de creare a
+utilizatorului în tranzacția PostgreSQL.
 
 #figure(
   caption: [Retest VULN-01: Cererea cu parolă trivială este respinsă de server cu eroarea HTTP 400 Bad Request.],
@@ -34,8 +34,8 @@ astfel nefezabil din punct de vedere economic și temporal.
 
 == VULN-03: Brute Force
 
-La rularea script-ului `exploits/brute-force`, mecanismul de rate limiting intervine prompt,
-frânând și blocând execuția automată a cererilor.
+La rularea script-ului `exploits/brute-force`, mecanismul de rate limiting intervine
+prompt, frânând și blocând execuția automată a cererilor.
 
 *Rezultat observat:* După un număr finit de încercări secvențiale eșuate, script-ul
 primește răspunsul HTTP `429 Too Many Requests`.
@@ -56,7 +56,8 @@ textului primit. Suplimentar, analiza timpului de răspuns demonstrează eficaci
 mecanismului de *dummy hash*. Deoarece serverul execută funcția Argon2id `verifyPassword`
 chiar și atunci când interogarea `GetUserByEmail` eșuează (utilizând hash-ul fictiv),
 ambele cereri consumă aproximativ același timp de procesare CPU. Această uniformizare
-temporală elimină complet oracolul bazat pe latență, blocând faza de recunoaștere a atacului.
+temporală elimină complet oracolul bazat pe latență, blocând faza de recunoaștere a
+atacului.
 
 #figure(
   caption: [Retest VULN-04: Eliminarea oracolului de enumerare prin returnarea aceluiași mesaj de eroare și a unui timp de execuție uniform.],
@@ -86,20 +87,22 @@ limitează fereastra de oportunitate la o perioadă infimă.
 == VULN-06: Token de Resetare Predictibil
 
 Reluarea atacului prin script-ul `exploits/password-reset` pe versiunea securizată
-demonstrează că algoritmul de generare a token-ului nu mai poate fi spart prin ghicirea secretului.
+demonstrează că algoritmul de generare a token-ului nu mai poate fi spart prin ghicirea
+secretului.
 
-*Rezultat observat:* Scriptul calculează o predicție bazată pe algoritmul vechi (timestamp și email).
-Totuși, la introducerea token-ului real generat de sistemul modern (preluat din log-uri),
-scriptul raportează imediat eșecul atacului: `Prediction did not match!`.
+*Rezultat observat:* Scriptul calculează o predicție bazată pe algoritmul vechi (timestamp
+și email). Totuși, la introducerea token-ului real generat de sistemul modern (preluat din
+log-uri), scriptul raportează imediat eșecul atacului: `Prediction did not match!`.
 
 Sistemul modern a schimbat complet formatul într-o structură compusă `{id}.{secret}`,
 iar secretul este generat folosind `crypto/rand` (256 biți de entropie). Oricât
-de multe încercări ar face un atacator offline, predicția sa (ex: `cml6ZXNxb...`) va diferi
-complet de valoarea criptografică reală (ex: `_bt_YH4...`).
+de multe încercări ar face un atacator offline, predicția sa (ex: `cml6ZXNxb...`) va
+diferi complet de valoarea criptografică reală (ex: `_bt_YH4...`).
 
 Deși scriptul trimite mai departe token-ul valid introdus manual și primește un răspuns
-`200 OK` (simulând astfel un flux legitim de resetare a parolei de către un utilizator real),
-scopul atacului de *a ghici* token-ul fără acces la email-ul victimei a eșuat irevocabil.
+`200 OK` (simulând astfel un flux legitim de resetare a parolei de către un utilizator
+real), scopul atacului de *a ghici* token-ul fără acces la email-ul victimei a eșuat
+irevocabil.
 
 #figure(
   caption: [Retest VULN-06: Demonstrarea eșecului de predicție a token-ului ("Prediction did not match!"), urmată de o resetare legitimă folosind token-ul real din log-uri.],

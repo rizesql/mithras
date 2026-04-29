@@ -62,8 +62,9 @@ explicit înaintea primei porniri a serverului:
   ```
 ]
 
-La pornire, serverul verifică integritatea schemei in baza de date și refuză să
-pornească dacă există migrații neaplicate, prevenind incompatibilități între cod și schemă.
+La pornire, serverul verifică integritatea schemei in baza de date și refuză să răspundă
+la cereri din rețea dacă există migrații neaplicate, prevenind incompatibilități între cod
+și schemă.
 
 #figure(
   caption: [Verificare stare migrații; toate înregistrările trebuie să aibă starea `Applied`],

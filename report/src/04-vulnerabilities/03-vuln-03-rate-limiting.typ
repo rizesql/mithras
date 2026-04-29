@@ -1,8 +1,8 @@
 == VULN-03: Lipsă de Rate Limiting pe Autentificare
 
 Pe branch-ul vulnerabil, middleware-ul de rate limiting a fost complet eliminat din fluxul
-cererilor HTTP aferente endpoint-ului de autentificare. Orice interfață de contorizare
-sau frânare temporală este absentă, permițând procesarea neîngrădită a cererilor. Aceasta
+cererilor HTTP aferente endpoint-ului de autentificare. Orice interfață de contorizare sau
+frânare temporală este absentă, permițând procesarea neîngrădită a cererilor. Aceasta
 reprezintă o vulnerabilitate critică, mapată ca A07:2025 și CWE-307 (Improper Restriction
 of Excessive Authentication Attempts) @cwe307.
 
@@ -36,8 +36,8 @@ cererilor:
 
 Endpoint-ul `/login` devine o țintă directă pentru scripturi de automatizare. Fără nicio
 penalizare temporală sau blocare la nivel de cont, un atacator poate rula un atac de
-dicționar exhaustiv. Aceasta transformă forța brută dintr-o procedură costisitoare într-una
-rapidă și cu o probabilitate de succes crescătoare în funcție de dimensiunea dicționarului,
-limitată exclusiv de latența conexiunii la rețea
-și de resursele alocate serverului IdP. Această vulnerabilitate este exacerbată sever în
-combinație cu politica slabă de parole (VULN-01).
+dicționar exhaustiv. Aceasta transformă forța brută dintr-o procedură costisitoare
+într-una rapidă și cu o probabilitate de succes crescătoare în funcție de dimensiunea
+dicționarului, limitată exclusiv de latența conexiunii la rețea și de resursele alocate
+serverului IdP. Această vulnerabilitate este exacerbată sever în combinație cu politica
+slabă de parole (VULN-01).
