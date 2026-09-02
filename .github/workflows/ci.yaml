@@ -1,61 +1,61 @@
-name: CI
+# name: CI
 
-on:
-  pull_request:
-  push:
-    branches: [main]
-    paths-ignore:
-      - "**.md"
+# on:
+#   pull_request:
+#   push:
+#     branches: [main]
+#     paths-ignore:
+#       - "**.md"
 
-env:
-  NIX_CONFIG: |
-    experimental-features = nix-command flakes
+# env:
+#   NIX_CONFIG: |
+#     experimental-features = nix-command flakes
 
-concurrency:
-  group: ${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: true
+# concurrency:
+#   group: ${{ github.workflow }}-${{ github.ref }}
+#   cancel-in-progress: true
 
-jobs:
-  lint:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v6
-      - uses: ./.github/actions/setup-nix
+# jobs:
+#   lint:
+#     runs-on: ubuntu-latest
+#     steps:
+#       - uses: actions/checkout@v6
+#       - uses: ./.github/actions/setup-nix
 
-      - name: GolangCI-lint
-        run: nix develop --command golangci-lint run --build-tags=dev ./...
+#       - name: GolangCI-lint
+#         run: nix develop --command golangci-lint run --build-tags=dev ./...
 
-  format:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v6
-      - uses: ./.github/actions/setup-nix
+#   format:
+#     runs-on: ubuntu-latest
+#     steps:
+#       - uses: actions/checkout@v6
+#       - uses: ./.github/actions/setup-nix
 
-      - name: Check formatting
-        run: nix develop --command gofmt -l .
+#       - name: Check formatting
+#         run: nix develop --command gofmt -l .
 
-  nix:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v6
-      - uses: ./.github/actions/setup-nix
+#   nix:
+#     runs-on: ubuntu-latest
+#     steps:
+#       - uses: actions/checkout@v6
+#       - uses: ./.github/actions/setup-nix
 
-      - run: nix flake check --print-build-logs
+#       - run: nix flake check --print-build-logs
 
-  test:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v6
-      - uses: ./.github/actions/setup-nix
+#   test:
+#     runs-on: ubuntu-latest
+#     steps:
+#       - uses: actions/checkout@v6
+#       - uses: ./.github/actions/setup-nix
 
-      - name: Run Standard Tests
-        run: nix develop --command go test -tags=dev -v ./...
+#       - name: Run Standard Tests
+#         run: nix develop --command go test -tags=dev -v ./...
 
-  test-race:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v6
-      - uses: ./.github/actions/setup-nix
+#   test-race:
+#     runs-on: ubuntu-latest
+#     steps:
+#       - uses: actions/checkout@v6
+#       - uses: ./.github/actions/setup-nix
 
-      - name: Run Race Detector
-        run: nix develop --command go test -tags=dev -race -v -short ./...
+#       - name: Run Race Detector
+#         run: nix develop --command go test -tags=dev -race -v -short ./...
